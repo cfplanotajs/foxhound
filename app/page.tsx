@@ -14,7 +14,6 @@ type JobTask = {
 };
 
 export default function DashboardPage() {
-  const [apiToken, setApiToken] = useState("");
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetId, setPresetId] = useState("");
   const [singlePrompt, setSinglePrompt] = useState("");
@@ -27,10 +26,8 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<JobTask[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const authHeaders = { "x-internal-api-token": apiToken };
-
   async function loadPresets() {
-    const res = await fetch("/api/presets", { headers: authHeaders });
+    const res = await fetch("/api/presets");
     const data = await res.json();
     if (!res.ok) return alert(data.error ?? "Failed to load presets");
     setPresets(data.presets);
@@ -45,13 +42,13 @@ export default function DashboardPage() {
     const idempotencyKey = crypto.randomUUID();
     const res = await fetch("/api/jobs", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey })
     });
     const data = await res.json();
     if (res.ok) {
       setJobId(data.jobId);
-      await fetch("/api/jobs/process", { method: "POST", headers: authHeaders });
+      await fetch("/api/jobs/process", { method: "POST" });
       await refreshJob(data.jobId);
       await refreshImages(data.jobId);
     } else {
@@ -62,21 +59,21 @@ export default function DashboardPage() {
 
   async function refreshJob(targetJobId = jobId) {
     if (!targetJobId) return;
-    const res = await fetch(`/api/jobs/${targetJobId}`, { headers: authHeaders });
+    const res = await fetch(`/api/jobs/${targetJobId}`);
     const data = await res.json();
     setJobStatus(data.job?.status ?? "unknown");
   }
 
   async function refreshImages(targetJobId = jobId) {
     if (!targetJobId) return;
-    const res = await fetch(`/api/jobs/${targetJobId}/images`, { headers: authHeaders });
+    const res = await fetch(`/api/jobs/${targetJobId}/images`);
     const data = await res.json();
     setTasks(data.tasks ?? []);
   }
 
   async function downloadZip() {
     if (!jobId) return;
-    const res = await fetch(`/api/jobs/${jobId}/download`, { headers: authHeaders });
+    const res = await fetch(`/api/jobs/${jobId}/download`);
     if (!res.ok) {
       const err = await res.json();
       return alert(err.error ?? "Download failed");
@@ -94,10 +91,6 @@ export default function DashboardPage() {
     <main className="mx-auto max-w-6xl p-6">
       <h1 className="mb-4 text-2xl font-bold">Internal Image Generation Dashboard</h1>
 
-      <label className="mb-4 block">
-        <span className="mb-1 block font-medium">Internal API Token</span>
-        <input type="password" value={apiToken} onChange={(e) => setApiToken(e.target.value)} className="w-full rounded border p-2" />
-      </label>
 
       <button className="mb-4 rounded bg-slate-700 px-3 py-2 text-white" onClick={loadPresets}>Load Presets</button>
 

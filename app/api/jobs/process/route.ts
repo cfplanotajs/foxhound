@@ -2,23 +2,34 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getProvider } from "@/lib/providers";
 import { saveImage } from "@/lib/storage";
-import { requireApiToken } from "@/lib/env";
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    requireApiToken(request);
-    const queuedJob = await prisma.generationJob.findFirst({ where: { status: "queued" }, orderBy: { createdAt: "asc" } });
-    if (!queuedJob) return NextResponse.json({ message: "No queued jobs" });
+    const queued = await prisma.generationJob.findFirst({ where: { status: "queued" }, orderBy: { createdAt: "asc" } });
+    if (!queued) return NextResponse.json({ message: "No queued jobs" });
 
-    await prisma.generationJob.update({ where: { id: queuedJob.id }, data: { status: "processing", startedAt: new Date() } });
-    const tasks = await prisma.generationTask.findMany({ where: { jobId: queuedJob.id }, orderBy: { createdAt: "asc" } });
-    const provider = getProvider(queuedJob.provider as "openai");
+    const claim = await prisma.generationJob.updateMany({
+      where: { id: queued.id, status: "queued" },
+      data: { status: "processing", startedAt: new Date() }
+    });
+    if (claim.count !== 1) return NextResponse.json({ message: "Job already claimed" });
+
+    const provider = getProvider(queued.provider as "openai");
+    const tasks = await prisma.generationTask.findMany({
+      where: { jobId: queued.id, status: "queued" },
+      orderBy: { createdAt: "asc" }
+    });
 
     for (const task of tasks) {
-      await prisma.generationTask.update({ where: { id: task.id }, data: { status: "processing", startedAt: new Date() } });
+      const taskClaim = await prisma.generationTask.updateMany({
+        where: { id: task.id, status: "queued" },
+        data: { status: "processing", startedAt: new Date() }
+      });
+      if (taskClaim.count !== 1) continue;
+
       try {
         const result = await provider.generateImage({
-          provider: queuedJob.provider as "openai",
+          provider: queued.provider as "openai",
           model: task.model,
           prompt: task.finalPrompt,
           size: "1024x1024",
@@ -48,20 +59,19 @@ export async function POST(request: Request) {
       }
     }
 
-    const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queuedJob.id } });
+    const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queued.id } });
     const allFailed = finishedTasks.every((t) => t.status === "failed");
     const anyFailed = finishedTasks.some((t) => t.status === "failed");
     await prisma.generationJob.update({
-      where: { id: queuedJob.id },
+      where: { id: queued.id },
       data: {
         status: allFailed ? "failed" : anyFailed ? "partial_failed" : "completed",
         completedAt: new Date()
       }
     });
 
-    return NextResponse.json({ processedJobId: queuedJob.id });
+    return NextResponse.json({ processedJobId: queued.id });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

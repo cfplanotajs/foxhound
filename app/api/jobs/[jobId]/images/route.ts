@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiToken } from "@/lib/env";
 
-export async function GET(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   try {
-    requireApiToken(request);
     const { jobId } = await params;
     const tasks = await prisma.generationTask.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } });
 
@@ -15,7 +13,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
       }))
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

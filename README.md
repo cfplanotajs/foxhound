@@ -21,7 +21,7 @@ Preset → Prompt composition → Job enqueue → OpenAI image generation → Lo
    ```bash
    cp .env.example .env
    ```
-3. Set `OPENAI_API_KEY` and `INTERNAL_API_TOKEN` in `.env`.
+3. Set `OPENAI_API_KEY` in `.env`.
 4. Generate Prisma client and run migrations:
    ```bash
    npm run prisma:generate
@@ -36,7 +36,6 @@ Preset → Prompt composition → Job enqueue → OpenAI image generation → Lo
 - `DATABASE_URL` - SQLite database path.
 - `OPENAI_API_KEY` - server-side API key for OpenAI.
 - `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
-- `INTERNAL_API_TOKEN` - required API header token (`x-internal-api-token`) for all API calls.
 
 ## Core API routes
 - `GET /api/presets`

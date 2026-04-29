@@ -3,7 +3,7 @@ import { z } from "zod";
 import { composePrompt } from "@/lib/prompt-composer";
 import { prisma } from "@/lib/db";
 import { getPresetById } from "@/lib/presets";
-import { getEnv, requireApiToken } from "@/lib/env";
+import { getEnv } from "@/lib/env";
 
 const MAX_PROMPT_LINES = 50;
 const MAX_TEXT_LEN = 2000;
@@ -20,7 +20,6 @@ const createJobSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    requireApiToken(request);
     getEnv();
     const body = createJobSchema.parse(await request.json());
     const preset = getPresetById(body.presetId);
@@ -63,7 +62,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ jobId: job.id, status: "queued" });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
