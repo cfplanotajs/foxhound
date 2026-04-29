@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "test": "node --import=tsx --test tests/**/*.test.ts"
+    "test": "node --import=tsx --test tests/**/*.test.ts",
+    "worker": "tsx scripts/worker.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

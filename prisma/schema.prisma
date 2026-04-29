@@ -53,6 +53,10 @@ model GenerationTask {
   requestPayloadJson   String?
   responseMetadataJson String?
   seed                 Int?
+  attempts             Int           @default(0)
+  maxAttempts          Int           @default(3)
+  nextAttemptAt        DateTime?
+  lastError            String?
   createdAt            DateTime      @default(now())
   startedAt            DateTime?
   completedAt          DateTime?

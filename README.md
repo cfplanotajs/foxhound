@@ -3,7 +3,7 @@
 Local internal tool for standardized AI image generation workflows for studio teams.
 
 ## MVP workflow
-Preset → Prompt composition → Job enqueue → OpenAI image generation → Local image save → Gallery → Audit log → ZIP download.
+Preset → Prompt composition → Job enqueue → Worker processes queued jobs → Local image save → Gallery → Audit log → ZIP download.
 
 ## Stack
 - Next.js (App Router)
@@ -27,16 +27,26 @@ Preset → Prompt composition → Job enqueue → OpenAI image generation → Lo
    npm run prisma:generate
    npm run prisma:migrate
    ```
-5. Run dev server:
+5. Run the app and worker in separate terminals:
    ```bash
    npm run dev
+   npm run worker
    ```
 
 ## Environment variables
 - `DATABASE_URL` - SQLite database path.
 - `OPENAI_API_KEY` - server-side API key for OpenAI.
 - `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
+- `WORKER_POLL_INTERVAL_MS` - worker polling interval in milliseconds.
+- `WORKER_MAX_ATTEMPTS` - max retry attempts per task.
+- `WORKER_RETRY_BASE_MS` - base backoff delay in milliseconds.
 
+## Local development flow
+1. `npm run dev`
+2. `npm run worker`
+3. Submit a job from dashboard
+4. Worker logs claim/process lifecycle
+5. Refresh gallery and download ZIP
 
 ## Tests
 Run tests with:
@@ -48,7 +58,7 @@ The project uses Node's built-in test runner with `tsx` registration for TypeScr
 ## Core API routes
 - `GET /api/presets`
 - `POST /api/jobs` (enqueue)
-- `POST /api/jobs/process` (process next queued job)
+- `POST /api/jobs/process` (manual process trigger)
 - `GET /api/jobs/:jobId`
 - `GET /api/jobs/:jobId/images`
 - `GET /api/images/:jobId/:taskId`
@@ -56,10 +66,10 @@ The project uses Node's built-in test runner with `tsx` registration for TypeScr
 
 ## Current limitations (MVP)
 - Only OpenAI provider is implemented.
-- Queue worker is endpoint-triggered (lightweight internal flow).
+- Worker is simple local poller, not distributed queue infra.
 - No auth system, cloud storage, CSV upload, or batch mode yet.
 
 ## Roadmap
 - Add provider adapters for Gemini/Nano Banana and Fal/Flux.
-- Move queue processing to dedicated worker process.
+- Add richer queue observability and admin controls.
 - Add OpenAI Batch API mode.

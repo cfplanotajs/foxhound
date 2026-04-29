@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/env";
 
 const MAX_PROMPT_LINES = 50;
 const MAX_TEXT_LEN = 2000;
+const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 
 const createJobSchema = z.object({
   presetId: z.string().min(1),
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
         provider,
         model,
         status: "queued",
+        attempts: 0,
+        maxAttempts: WORKER_MAX_ATTEMPTS,
+        nextAttemptAt: null,
         requestPayloadJson: JSON.stringify({ model, params: preset.defaultParams })
       }))
     });
