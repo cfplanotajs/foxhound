@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getProvider } from "@/lib/providers";
 import { saveImage } from "@/lib/storage";
+import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 
 export async function POST() {
   try {
@@ -60,12 +61,10 @@ export async function POST() {
     }
 
     const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queued.id } });
-    const allFailed = finishedTasks.every((t) => t.status === "failed");
-    const anyFailed = finishedTasks.some((t) => t.status === "failed");
     await prisma.generationJob.update({
       where: { id: queued.id },
       data: {
-        status: allFailed ? "failed" : anyFailed ? "partial_failed" : "completed",
+        status: aggregateJobStatus(finishedTasks.map((task) => task.status as TaskLikeStatus)),
         completedAt: new Date()
       }
     });

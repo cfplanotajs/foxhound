@@ -37,6 +37,14 @@ Preset → Prompt composition → Job enqueue → OpenAI image generation → Lo
 - `OPENAI_API_KEY` - server-side API key for OpenAI.
 - `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
 
+
+## Tests
+Run tests with:
+```bash
+npm test
+```
+The project uses Node's built-in test runner with `tsx` registration for TypeScript test files.
+
 ## Core API routes
 - `GET /api/presets`
 - `POST /api/jobs` (enqueue)
