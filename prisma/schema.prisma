@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  queued
+  processing
+  completed
+  partial_failed
+  failed
+}
+
+enum TaskStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
+model GenerationJob {
+  id             String           @id @default(cuid())
+  status         JobStatus        @default(queued)
+  provider       String
+  model          String
+  idempotencyKey String?          @unique
+  createdAt      DateTime         @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  tasks          GenerationTask[]
+}
+
+model GenerationTask {
+  id                   String        @id @default(cuid())
+  jobId                String
+  job                  GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  presetId             String
+  presetName           String
+  presetVersion        String
+  stylePromptSnapshot  String
+  subjectPrompt        String
+  finalPrompt          String
+  constraints          String?
+  provider             String
+  model                String
+  status               TaskStatus    @default(queued)
+  outputPath           String?
+  errorMessage         String?
+  requestPayloadJson   String?
+  responseMetadataJson String?
+  seed                 Int?
+  createdAt            DateTime      @default(now())
+  startedAt            DateTime?
+  completedAt          DateTime?
+}
