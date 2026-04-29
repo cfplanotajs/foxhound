@@ -1,0 +1,41 @@
+[
+  {
+    "id": "kids_vector_landmark_v1",
+    "name": "Kids Vector Landmarks",
+    "version": "v1",
+    "description": "Bright educational landmark illustrations for children's products",
+    "stylePrompt": "Flat vector illustration, clean geometric shapes, bold outlines, playful composition, age-appropriate details, bright but balanced color palette, white or simple background, no text, no watermark.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high"
+    }
+  },
+  {
+    "id": "storybook_gouache_habitat_v1",
+    "name": "Storybook Gouache Habitats",
+    "version": "v1",
+    "description": "Painterly gouache style scenes for educational habitat content",
+    "stylePrompt": "Storybook gouache painting style, soft brush texture, warm lighting, layered depth, cohesive palette, whimsical but realistic proportions, child-friendly tone, no text overlays.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high"
+    }
+  },
+  {
+    "id": "clean_sticker_character_v1",
+    "name": "Clean Sticker Characters",
+    "version": "v1",
+    "description": "Simple character stickers with clear silhouettes and print-friendly finishing",
+    "stylePrompt": "Cute character sticker style, centered composition, crisp edges, high contrast silhouette readability, limited background elements, vibrant colors, printable quality, no text.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high"
+    }
+  }
+]
