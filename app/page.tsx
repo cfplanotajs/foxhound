@@ -10,10 +10,11 @@ type JobTask = {
   subjectPrompt: string;
   status: string;
   errorMessage: string | null;
-  imageBase64: string | null;
+  imageUrl: string | null;
 };
 
 export default function DashboardPage() {
+  const [apiToken, setApiToken] = useState("");
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetId, setPresetId] = useState("");
   const [singlePrompt, setSinglePrompt] = useState("");
@@ -26,9 +27,12 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<JobTask[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const authHeaders = { "x-internal-api-token": apiToken };
+
   async function loadPresets() {
-    const res = await fetch("/api/presets");
+    const res = await fetch("/api/presets", { headers: authHeaders });
     const data = await res.json();
+    if (!res.ok) return alert(data.error ?? "Failed to load presets");
     setPresets(data.presets);
     if (data.presets.length > 0 && !presetId) {
       setPresetId(data.presets[0].id);
@@ -38,14 +42,16 @@ export default function DashboardPage() {
 
   async function submitJob() {
     setLoading(true);
+    const idempotencyKey = crypto.randomUUID();
     const res = await fetch("/api/jobs", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints })
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey })
     });
     const data = await res.json();
     if (res.ok) {
       setJobId(data.jobId);
+      await fetch("/api/jobs/process", { method: "POST", headers: authHeaders });
       await refreshJob(data.jobId);
       await refreshImages(data.jobId);
     } else {
@@ -56,21 +62,43 @@ export default function DashboardPage() {
 
   async function refreshJob(targetJobId = jobId) {
     if (!targetJobId) return;
-    const res = await fetch(`/api/jobs/${targetJobId}`);
+    const res = await fetch(`/api/jobs/${targetJobId}`, { headers: authHeaders });
     const data = await res.json();
     setJobStatus(data.job?.status ?? "unknown");
   }
 
   async function refreshImages(targetJobId = jobId) {
     if (!targetJobId) return;
-    const res = await fetch(`/api/jobs/${targetJobId}/images`);
+    const res = await fetch(`/api/jobs/${targetJobId}/images`, { headers: authHeaders });
     const data = await res.json();
     setTasks(data.tasks ?? []);
+  }
+
+  async function downloadZip() {
+    if (!jobId) return;
+    const res = await fetch(`/api/jobs/${jobId}/download`, { headers: authHeaders });
+    if (!res.ok) {
+      const err = await res.json();
+      return alert(err.error ?? "Download failed");
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `job-${jobId}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
     <main className="mx-auto max-w-6xl p-6">
       <h1 className="mb-4 text-2xl font-bold">Internal Image Generation Dashboard</h1>
+
+      <label className="mb-4 block">
+        <span className="mb-1 block font-medium">Internal API Token</span>
+        <input type="password" value={apiToken} onChange={(e) => setApiToken(e.target.value)} className="w-full rounded border p-2" />
+      </label>
+
       <button className="mb-4 rounded bg-slate-700 px-3 py-2 text-white" onClick={loadPresets}>Load Presets</button>
 
       <div className="grid gap-4 rounded bg-white p-4 shadow">
@@ -84,36 +112,15 @@ export default function DashboardPage() {
         </label>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="grid gap-1">
-            <span className="font-medium">Provider</span>
-            <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2">
-              <option value="openai">OpenAI</option>
-            </select>
-          </label>
-          <label className="grid gap-1">
-            <span className="font-medium">Model</span>
-            <input value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2" />
-          </label>
+          <label className="grid gap-1"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="openai">OpenAI</option></select></label>
+          <label className="grid gap-1"><span className="font-medium">Model</span><input value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2" /></label>
         </div>
 
-        <label className="grid gap-1">
-          <span className="font-medium">Single Prompt</span>
-          <textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-24 rounded border p-2" />
-        </label>
+        <label className="grid gap-1"><span className="font-medium">Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-24 rounded border p-2" /></label>
+        <label className="grid gap-1"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-32 rounded border p-2" /></label>
+        <label className="grid gap-1"><span className="font-medium">Production Constraints (optional)</span><textarea value={constraints} onChange={(e) => setConstraints(e.target.value)} className="min-h-20 rounded border p-2" /></label>
 
-        <label className="grid gap-1">
-          <span className="font-medium">Bulk Prompts (one per line)</span>
-          <textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-32 rounded border p-2" />
-        </label>
-
-        <label className="grid gap-1">
-          <span className="font-medium">Production Constraints (optional)</span>
-          <textarea value={constraints} onChange={(e) => setConstraints(e.target.value)} className="min-h-20 rounded border p-2" />
-        </label>
-
-        <button disabled={loading} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50" onClick={submitJob}>
-          {loading ? "Generating..." : "Submit Job"}
-        </button>
+        <button disabled={loading} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50" onClick={submitJob}>{loading ? "Generating..." : "Submit Job"}</button>
       </div>
 
       {jobId && (
@@ -123,17 +130,13 @@ export default function DashboardPage() {
           <div className="mt-2 flex gap-2">
             <button className="rounded bg-slate-700 px-3 py-1 text-white" onClick={() => refreshJob()}>Refresh Status</button>
             <button className="rounded bg-slate-700 px-3 py-1 text-white" onClick={() => refreshImages()}>Refresh Gallery</button>
-            <a href={`/api/jobs/${jobId}/download`} className="rounded bg-green-700 px-3 py-1 text-white">Download All as ZIP</a>
+            <button className="rounded bg-green-700 px-3 py-1 text-white" onClick={downloadZip}>Download All as ZIP</button>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {tasks.map((task) => (
               <div key={task.id} className="rounded bg-white p-3 shadow">
-                {task.imageBase64 ? (
-                  <img src={`data:image/png;base64,${task.imageBase64}`} alt={task.subjectPrompt} className="mb-2 h-48 w-full rounded object-cover" />
-                ) : (
-                  <div className="mb-2 flex h-48 items-center justify-center rounded bg-slate-200">No Image</div>
-                )}
+                {task.imageUrl ? <img src={`${task.imageUrl}`} alt={task.subjectPrompt} className="mb-2 h-48 w-full rounded object-cover" /> : <div className="mb-2 flex h-48 items-center justify-center rounded bg-slate-200">No Image</div>}
                 <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 80)}</p>
                 <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
                 <p className="text-sm"><strong>Status:</strong> {task.status}</p>

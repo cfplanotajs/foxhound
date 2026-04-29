@@ -1,25 +1,21 @@
-import fs from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireApiToken } from "@/lib/env";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ jobId: string }> }) {
-  const { jobId } = await params;
-  const tasks = await prisma.generationTask.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } });
+export async function GET(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
+  try {
+    requireApiToken(request);
+    const { jobId } = await params;
+    const tasks = await prisma.generationTask.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } });
 
-  const payload = await Promise.all(
-    tasks.map(async (task) => {
-      let imageBase64: string | null = null;
-      if (task.outputPath) {
-        try {
-          const bytes = await fs.readFile(task.outputPath);
-          imageBase64 = bytes.toString("base64");
-        } catch {
-          imageBase64 = null;
-        }
-      }
-      return { ...task, imageBase64 };
-    })
-  );
-
-  return NextResponse.json({ tasks: payload });
+    return NextResponse.json({
+      tasks: tasks.map((task) => ({
+        ...task,
+        imageUrl: task.outputPath ? `/api/images/${jobId}/${task.id}` : null
+      }))
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
+  }
 }

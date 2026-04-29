@@ -3,7 +3,7 @@
 Local internal tool for standardized AI image generation workflows for studio teams.
 
 ## MVP workflow
-Preset → Prompt composition → OpenAI image generation → Local image save → Gallery → Audit log → ZIP download.
+Preset → Prompt composition → Job enqueue → OpenAI image generation → Local image save → Gallery → Audit log → ZIP download.
 
 ## Stack
 - Next.js (App Router)
@@ -21,7 +21,7 @@ Preset → Prompt composition → OpenAI image generation → Local image save �
    ```bash
    cp .env.example .env
    ```
-3. Set `OPENAI_API_KEY` in `.env`.
+3. Set `OPENAI_API_KEY` and `INTERNAL_API_TOKEN` in `.env`.
 4. Generate Prisma client and run migrations:
    ```bash
    npm run prisma:generate
@@ -36,21 +36,23 @@ Preset → Prompt composition → OpenAI image generation → Local image save �
 - `DATABASE_URL` - SQLite database path.
 - `OPENAI_API_KEY` - server-side API key for OpenAI.
 - `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
+- `INTERNAL_API_TOKEN` - required API header token (`x-internal-api-token`) for all API calls.
 
 ## Core API routes
 - `GET /api/presets`
-- `POST /api/jobs`
+- `POST /api/jobs` (enqueue)
+- `POST /api/jobs/process` (process next queued job)
 - `GET /api/jobs/:jobId`
 - `GET /api/jobs/:jobId/images`
+- `GET /api/images/:jobId/:taskId`
 - `GET /api/jobs/:jobId/download`
 
 ## Current limitations (MVP)
 - Only OpenAI provider is implemented.
-- Jobs are processed sequentially in request lifecycle.
-- No auth, cloud storage, queues, CSV upload, or batch mode yet.
+- Queue worker is endpoint-triggered (lightweight internal flow).
+- No auth system, cloud storage, CSV upload, or batch mode yet.
 
 ## Roadmap
 - Add provider adapters for Gemini/Nano Banana and Fal/Flux.
-- Add queued background processing and retries.
+- Move queue processing to dedicated worker process.
 - Add OpenAI Batch API mode.
-- Add richer filters/search in gallery.

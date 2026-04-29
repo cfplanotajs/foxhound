@@ -7,18 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum JobStatus {
+  queued
+  processing
+  completed
+  partial_failed
+  failed
+}
+
+enum TaskStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
 model GenerationJob {
-  id          String           @id @default(cuid())
-  status      String
-  provider    String
-  model       String
-  createdAt   DateTime         @default(now())
-  completedAt DateTime?
-  tasks       GenerationTask[]
+  id             String           @id @default(cuid())
+  status         JobStatus        @default(queued)
+  provider       String
+  model          String
+  idempotencyKey String?          @unique
+  createdAt      DateTime         @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  tasks          GenerationTask[]
 }
 
 model GenerationTask {
-  id                   String   @id @default(cuid())
+  id                   String        @id @default(cuid())
   jobId                String
   job                  GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   presetId             String
@@ -30,12 +47,13 @@ model GenerationTask {
   constraints          String?
   provider             String
   model                String
-  status               String
+  status               TaskStatus    @default(queued)
   outputPath           String?
   errorMessage         String?
   requestPayloadJson   String?
   responseMetadataJson String?
   seed                 Int?
-  createdAt            DateTime @default(now())
+  createdAt            DateTime      @default(now())
+  startedAt            DateTime?
   completedAt          DateTime?
 }

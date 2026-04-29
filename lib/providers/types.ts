@@ -1,14 +1,22 @@
-export interface ProviderGenerateRequest {
-  prompt: string;
+export type ProviderName = "openai";
+
+export interface NormalizedImageRequest {
+  provider: ProviderName;
   model: string;
-  params?: Record<string, unknown>;
+  prompt: string;
+  size?: string;
+  quality?: "low" | "medium" | "high" | "auto";
+  count?: number;
 }
 
-export interface ProviderGenerateResponse {
-  imageBytes: Buffer;
-  metadata: Record<string, unknown>;
+export interface NormalizedImageResult {
+  images: Array<{
+    bytes: Buffer;
+    mimeType: string;
+  }>;
+  providerMetadata: Record<string, unknown>;
 }
 
 export interface ImageProvider {
-  generateImage(request: ProviderGenerateRequest): Promise<ProviderGenerateResponse>;
+  generateImage(request: NormalizedImageRequest): Promise<NormalizedImageResult>;
 }
