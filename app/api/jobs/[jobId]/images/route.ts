@@ -7,7 +7,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
     const tasks = await prisma.generationTask.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } });
 
     return NextResponse.json({
-      tasks: tasks.map((task) => ({
+      tasks: tasks.map((task: { outputPath: string | null; id: string }) => ({
         ...task,
         imageUrl: task.outputPath ? `/api/images/${jobId}/${task.id}` : null
       }))

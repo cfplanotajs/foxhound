@@ -88,7 +88,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
   }
 
   const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queued.id } });
-  const unresolved = finishedTasks.some((t) => t.status === "queued" || (t.status === "failed" && t.attempts < t.maxAttempts));
+  const unresolved = finishedTasks.some((t: { status: string; attempts: number; maxAttempts: number }) => t.status === "queued" || (t.status === "failed" && t.attempts < t.maxAttempts));
 
   if (unresolved) {
     await prisma.generationJob.update({ where: { id: queued.id }, data: { status: "queued" } });
@@ -96,7 +96,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
     return queued.id;
   }
 
-  const status = aggregateJobStatus(finishedTasks.map((task) => task.status as TaskLikeStatus));
+  const status = aggregateJobStatus(finishedTasks.map((task: { status: string }) => task.status as TaskLikeStatus));
   await prisma.generationJob.update({ where: { id: queued.id }, data: { status, completedAt: new Date() } });
   logger.info(`[worker] job ${status} ${queued.id}`);
 

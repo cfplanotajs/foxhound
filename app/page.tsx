@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string };
 type JobTask = {
@@ -25,8 +25,9 @@ export default function DashboardPage() {
   const [jobStatus, setJobStatus] = useState("");
   const [tasks, setTasks] = useState<JobTask[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function loadPresets() {
+  const loadPresets = useCallback(async () => {
     const res = await fetch("/api/presets");
     const data = await res.json();
     if (!res.ok) return alert(data.error ?? "Failed to load presets");
@@ -35,9 +36,19 @@ export default function DashboardPage() {
       setPresetId(data.presets[0].id);
       setModel(data.presets[0].defaultModel);
     }
-  }
+  }, [presetId]);
+
+  useEffect(() => {
+    void loadPresets();
+  }, [loadPresets]);
 
   async function submitJob() {
+    setError("");
+    if (!presetId) return setError("Preset is required.");
+    if (!provider) return setError("Provider is required.");
+    if (!model.trim()) return setError("Model is required.");
+    if (!singlePrompt.trim() && !bulkPrompts.trim()) return setError("Please provide at least one prompt line.");
+
     setLoading(true);
     const idempotencyKey = crypto.randomUUID();
     const res = await fetch("/api/jobs", {
@@ -52,7 +63,7 @@ export default function DashboardPage() {
       await refreshJob(data.jobId);
       await refreshImages(data.jobId);
     } else {
-      alert(data.error ?? "Failed to submit job");
+      setError(data.error ?? "Failed to submit job");
     }
     setLoading(false);
   }
@@ -95,6 +106,7 @@ export default function DashboardPage() {
       <button className="mb-4 rounded bg-slate-700 px-3 py-2 text-white" onClick={loadPresets}>Load Presets</button>
 
       <div className="grid gap-4 rounded bg-white p-4 shadow">
+        {error ? <p className="rounded bg-red-100 p-2 text-sm text-red-700">{error}</p> : null}
         <label className="grid gap-1">
           <span className="font-medium">Preset</span>
           <select value={presetId} onChange={(e) => setPresetId(e.target.value)} className="rounded border p-2">

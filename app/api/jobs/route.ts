@@ -4,20 +4,10 @@ import { composePrompt } from "@/lib/prompt-composer";
 import { prisma } from "@/lib/db";
 import { getPresetById } from "@/lib/presets";
 import { getEnv } from "@/lib/env";
+import { createJobSchema } from "@/lib/jobs/validation";
 
 const MAX_PROMPT_LINES = 50;
-const MAX_TEXT_LEN = 2000;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
-
-const createJobSchema = z.object({
-  presetId: z.string().min(1),
-  provider: z.literal("openai").optional(),
-  model: z.string().min(1).max(120).optional(),
-  constraints: z.string().max(MAX_TEXT_LEN).optional(),
-  singlePrompt: z.string().max(MAX_TEXT_LEN).optional(),
-  bulkPrompts: z.string().max(MAX_TEXT_LEN * MAX_PROMPT_LINES).optional(),
-  idempotencyKey: z.string().min(8).max(128).optional()
-});
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +22,9 @@ export async function POST(request: Request) {
     }
 
     const provider = body.provider ?? preset.defaultProvider;
-    const model = body.model ?? getEnv().OPENAI_IMAGE_MODEL ?? preset.defaultModel;
+    const model = body.model;
+    if (!provider) return NextResponse.json({ error: "Provider is required" }, { status: 400 });
+    if (!model) return NextResponse.json({ error: "Model is required" }, { status: 400 });
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
     const single = body.singlePrompt?.trim();
