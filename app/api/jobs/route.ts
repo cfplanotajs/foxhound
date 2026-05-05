@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getPresetById } from "@/lib/presets";
 import { getEnv } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
+import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
@@ -32,9 +33,18 @@ export async function POST(request: Request) {
     if (subjectPrompts.length === 0) return NextResponse.json({ error: "Please provide at least one prompt" }, { status: 400 });
     if (subjectPrompts.length > MAX_PROMPT_LINES) return NextResponse.json({ error: "Too many prompt lines" }, { status: 400 });
 
-    const job = await prisma.generationJob.create({
-      data: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey }
-    });
+    let job;
+    try {
+      job = await prisma.generationJob.create({
+        data: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey }
+      });
+    } catch (error) {
+      if (body.idempotencyKey && isIdempotencyCollisionError(error)) {
+        const existing = await prisma.generationJob.findUnique({ where: { idempotencyKey: body.idempotencyKey } });
+        if (existing) return NextResponse.json({ jobId: existing.id, deduped: true });
+      }
+      throw error;
+    }
 
     await prisma.generationTask.createMany({
       data: subjectPrompts.map((subjectPrompt) => ({

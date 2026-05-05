@@ -3,6 +3,7 @@ import { getProvider } from "@/lib/providers";
 import { saveImage } from "@/lib/storage";
 import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
+import { buildProviderRequest, extractTaskParams } from "@/lib/jobs/provider-payload";
 
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
@@ -46,14 +47,17 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
     if (taskClaim.count !== 1) continue;
 
     try {
-      const result = await provider.generateImage({
+      const providerRequest = buildProviderRequest({
         provider: queued.provider as "openai",
         model: task.model,
         prompt: task.finalPrompt,
-        size: "1024x1024",
-        quality: "high",
-        count: 1
+        params: extractTaskParams(task.requestPayloadJson)
       });
+      await prisma.generationTask.update({
+        where: { id: task.id },
+        data: { requestPayloadJson: JSON.stringify(providerRequest) }
+      });
+      const result = await provider.generateImage(providerRequest);
 
       const outputPath = await saveImage(task.jobId, task.id, result.images[0].bytes);
       await prisma.generationTask.update({
