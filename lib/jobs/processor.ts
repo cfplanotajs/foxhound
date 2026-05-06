@@ -12,6 +12,28 @@ const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
 const WORKER_STALLED_AFTER_MS = Number(process.env.WORKER_STALLED_AFTER_MS ?? "900000");
 
+async function failClaimedJobTasks(jobId: string, setupError: unknown, logger: Pick<Console, "info" | "error">): Promise<void> {
+  const normalized = normalizeProviderError(setupError);
+  const tasks = await prisma.generationTask.findMany({ where: { jobId, status: { in: ["queued", "processing"] } } });
+  for (const task of tasks) {
+    const attempts = task.attempts + 1;
+    await prisma.generationTask.update({
+      where: { id: task.id },
+      data: {
+        status: "failed",
+        attempts,
+        lastError: normalized.technicalMessage,
+        errorMessage: normalized.title,
+        responseMetadataJson: JSON.stringify({ providerError: normalized }),
+        nextAttemptAt: null,
+        completedAt: new Date()
+      }
+    });
+  }
+  await prisma.generationJob.update({ where: { id: jobId }, data: { status: "failed", completedAt: new Date() } });
+  logger.error(`[worker] job failed during provider setup ${jobId} kind=${normalized.kind}`);
+}
+
 export async function recoverStalledProcessingJobs(logger: Pick<Console, "info" | "error"> = console): Promise<void> {
   const now = new Date();
   const processingJobs = await prisma.generationJob.findMany({ where: { status: "processing" }, include: { tasks: true } });
@@ -72,7 +94,13 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
   if (claim.count !== 1) return null;
 
   logger.info(`[worker] job claimed ${queued.id}`);
-  const provider = getProvider(queued.provider as "openai" | "mock");
+  let provider;
+  try {
+    provider = getProvider(queued.provider as "openai" | "mock");
+  } catch (error) {
+    await failClaimedJobTasks(queued.id, error, logger);
+    return queued.id;
+  }
 
   const tasks = await prisma.generationTask.findMany({
     where: {

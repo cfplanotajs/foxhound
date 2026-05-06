@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { getEnv } from "@/lib/env";
+import { getOpenAIConfig } from "@/lib/env";
 import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/lib/providers/types";
 
 type Payload = Record<string, unknown>;
@@ -82,8 +82,7 @@ export class OpenAIProvider implements ImageProvider {
   private client: OpenAI;
 
   constructor() {
-    const apiKey = getEnv().OPENAI_API_KEY;
-    if (!apiKey) throw new Error("OpenAI API key is missing. Add OPENAI_API_KEY to the server .env file, or use Demo Mode.");
+    const { apiKey } = getOpenAIConfig();
     this.client = new OpenAI({ apiKey });
   }
 

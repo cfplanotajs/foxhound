@@ -54,7 +54,7 @@ export function buildProviderRequest(input: {
     size: params.size ?? "1024x1024",
     quality: params.quality ?? "high",
     count: safeCount,
-    presetName: input.presetName
+    ...(input.presetName ? { presetName: input.presetName } : {})
   } as const;
 }
 

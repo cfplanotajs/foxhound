@@ -3,14 +3,16 @@ import { z } from "zod";
 import { composePrompt } from "@/lib/prompt-composer";
 import { prisma } from "@/lib/db";
 import { getPresetById } from "@/lib/presets";
-import { getEnv } from "@/lib/env";
+import { getEnv, MISSING_OPENAI_KEY_MESSAGE } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
 import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
 import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
 import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
+import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
+
 
 export async function POST(request: Request) {
   try {
@@ -28,6 +30,7 @@ export async function POST(request: Request) {
     const model = body.model;
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
+    ensureJobProviderConfigured(provider);
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
     const single = body.singlePrompt?.trim();
@@ -67,6 +70,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ jobId: job.id, status: "queued" });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+    if (error instanceof Error && error.message === MISSING_OPENAI_KEY_MESSAGE) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
