@@ -1,0 +1,24 @@
+import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
+
+export interface StalledTask {
+  id: string;
+  status: string;
+  attempts: number;
+  maxAttempts: number;
+  nextAttemptAt: Date | null;
+}
+
+export function isJobStalled(startedAt: Date | null, now: Date, stalledAfterMs: number): boolean {
+  if (!startedAt) return false;
+  return startedAt.getTime() <= now.getTime() - stalledAfterMs;
+}
+
+export function shouldRetryAfterStall(task: StalledTask): boolean {
+  return task.status === "processing" && task.attempts + 1 < task.maxAttempts;
+}
+
+export function reconcileJobStatusFromTasks(tasks: Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }>): "queued" | "completed" | "partial_failed" | "failed" {
+  const hasUnresolved = tasks.some((t) => t.status === "queued" || (t.status === "failed" && t.attempts < t.maxAttempts));
+  if (hasUnresolved) return "queued";
+  return aggregateJobStatus(tasks.map((t) => t.status as TaskLikeStatus));
+}

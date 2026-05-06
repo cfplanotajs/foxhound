@@ -6,11 +6,48 @@ import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
 import { buildProviderRequest, extractTaskParams, serializeTaskPayload } from "@/lib/jobs/provider-payload";
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 import { shouldRequeueAfterPass } from "@/lib/jobs/actionable";
+import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
 
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
+const WORKER_STALLED_AFTER_MS = Number(process.env.WORKER_STALLED_AFTER_MS ?? "900000");
+
+export async function recoverStalledProcessingJobs(logger: Pick<Console, "info" | "error"> = console): Promise<void> {
+  const now = new Date();
+  const processingJobs = await prisma.generationJob.findMany({ where: { status: "processing" }, include: { tasks: true } });
+
+  for (const job of processingJobs) {
+    if (!isJobStalled(job.startedAt, now, WORKER_STALLED_AFTER_MS)) continue;
+    logger.info(`[worker] reclaiming stalled job ${job.id}`);
+
+    for (const task of job.tasks) {
+      if (task.status !== "processing") continue;
+      const retryable = shouldRetryAfterStall(task as unknown as StalledTask);
+      const attempts = task.attempts + 1;
+      await prisma.generationTask.update({
+        where: { id: task.id },
+        data: {
+          status: "failed",
+          attempts,
+          nextAttemptAt: retryable ? new Date() : null,
+          errorMessage: task.errorMessage ?? "Worker stopped before task completed.",
+          lastError: task.lastError ?? "Worker stopped before task completed.",
+          completedAt: retryable ? null : new Date()
+        }
+      });
+    }
+
+    const refreshedTasks = await prisma.generationTask.findMany({ where: { jobId: job.id } });
+    const status = reconcileJobStatusFromTasks(refreshedTasks);
+    await prisma.generationJob.update({
+      where: { id: job.id },
+      data: { status, ...(status !== "queued" ? { completedAt: new Date() } : {}) }
+    });
+  }
+}
 
 export async function processNextQueuedJob(logger: Pick<Console, "info" | "error"> = console): Promise<string | null> {
+  await recoverStalledProcessingJobs(logger);
   const now = new Date();
   const queued = await prisma.generationJob.findFirst({
     where: {
