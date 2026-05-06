@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { composePrompt } from "@/lib/prompt-composer";
 import { prisma } from "@/lib/db";
-import { getPresetById } from "@/lib/presets";
+import { getPresetByStableKey, seedPresetsFromConfig } from "@/lib/presets";
 import { getEnv, MISSING_OPENAI_KEY_MESSAGE } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
 import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   try {
     getEnv();
     const body = createJobSchema.parse(await request.json());
-    const preset = getPresetById(body.presetId);
+    await seedPresetsFromConfig();
+    const preset = await getPresetByStableKey(body.presetId);
     if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 400 });
 
     if (body.idempotencyKey) {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     const model = body.model;
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
-    ensureJobProviderConfigured(provider);
+    ensureJobProviderConfigured(provider as "openai" | "mock");
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
     const single = body.singlePrompt?.trim();
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       job = await createJobAndTasksAtomic(prisma as never, {
         jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey },
         taskData: subjectPrompts.map((subjectPrompt) => ({
-            presetId: preset.id,
+            presetId: preset.stableKey,
             presetName: preset.name,
             presetVersion: preset.version,
             stylePromptSnapshot: preset.stylePrompt,
@@ -56,7 +57,11 @@ export async function POST(request: Request) {
             attempts: 0,
             maxAttempts: WORKER_MAX_ATTEMPTS,
             nextAttemptAt: null,
-            requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model })
+            defaultProviderSnapshot: preset.defaultProvider,
+            defaultModelSnapshot: preset.defaultModel,
+            defaultParamsJsonSnapshot: JSON.stringify(preset.defaultParams),
+            requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model }),
+            presetVersionId: preset.versionId
           }))
       });
     } catch (error) {

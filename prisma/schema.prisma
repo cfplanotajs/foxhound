@@ -22,6 +22,35 @@ enum TaskStatus {
   failed
 }
 
+model Preset {
+  id          String          @id @default(cuid())
+  stableKey   String          @unique
+  name        String
+  description String
+  bestUseLabel String?
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    PresetVersion[]
+}
+
+model PresetVersion {
+  id              String   @id @default(cuid())
+  presetId        String
+  preset          Preset   @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  version         String
+  stylePrompt     String
+  defaultProvider String
+  defaultModel    String
+  defaultParamsJson String
+  samplePrompt    String?
+  contentHash     String
+  createdAt       DateTime @default(now())
+
+  @@unique([presetId, version])
+  @@unique([presetId, contentHash])
+}
+
 model GenerationJob {
   id             String           @id @default(cuid())
   status         JobStatus        @default(queued)
@@ -39,9 +68,13 @@ model GenerationTask {
   jobId                String
   job                  GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   presetId             String
+  presetVersionId      String?
   presetName           String
   presetVersion        String
   stylePromptSnapshot  String
+  defaultProviderSnapshot String?
+  defaultModelSnapshot String?
+  defaultParamsJsonSnapshot String?
   subjectPrompt        String
   finalPrompt          String
   constraints          String?

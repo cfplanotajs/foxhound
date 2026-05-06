@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { getPresets } from "@/lib/presets";
+import { getActivePresets, seedPresetsFromConfig } from "@/lib/presets";
 
 export async function GET() {
-  return NextResponse.json({ presets: getPresets() });
+  await seedPresetsFromConfig();
+  const presets = await getActivePresets();
+  return NextResponse.json({ presets });
 }

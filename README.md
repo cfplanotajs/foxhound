@@ -73,3 +73,14 @@ The project uses Node's built-in test runner with `tsx` registration for TypeScr
 - Add provider adapters for Gemini/Nano Banana and Fal/Flux.
 - Add richer queue observability and admin controls.
 - Add OpenAI Batch API mode.
+
+
+## Phase 3 preset seed
+
+After migrations, presets are auto-seeded from `config/presets.json` when `/api/presets` or job creation endpoints are called.
+For local setup run:
+
+```bash
+DATABASE_URL=file:./prisma/dev.db npx prisma migrate dev
+DATABASE_URL=file:./prisma/dev.db npm run prisma:generate
+```
