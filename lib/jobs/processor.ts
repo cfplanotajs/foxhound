@@ -4,6 +4,7 @@ import { saveImage } from "@/lib/storage";
 import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
 import { buildProviderRequest, extractTaskParams } from "@/lib/jobs/provider-payload";
+import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
@@ -71,6 +72,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
       });
       logger.info(`[worker] task completed ${task.id}`);
     } catch (error) {
+      const normalized = normalizeProviderError(error);
       const latest = await prisma.generationTask.findUnique({ where: { id: task.id } });
       const attempts = (latest?.attempts ?? 0) + 1;
       const canRetry = shouldRetry(attempts, latest?.maxAttempts ?? WORKER_MAX_ATTEMPTS);
@@ -81,13 +83,14 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
           status: canRetry ? "failed" : "failed",
           attempts,
           maxAttempts: latest?.maxAttempts ?? WORKER_MAX_ATTEMPTS,
-          lastError: error instanceof Error ? error.message : "Unknown provider error",
-          errorMessage: error instanceof Error ? error.message : "Unknown provider error",
+          lastError: normalized.technicalMessage,
+          errorMessage: normalized.title,
+          responseMetadataJson: JSON.stringify({ providerError: normalized }),
           nextAttemptAt: canRetry ? new Date(Date.now() + computeBackoffMs(attempts, WORKER_RETRY_BASE_MS)) : null,
           completedAt: canRetry ? null : new Date()
         }
       });
-      logger.error(`[worker] task failed ${task.id} attempt=${attempts}`);
+      logger.error(`[worker] task failed ${task.id} attempt=${attempts} kind=${normalized.kind}`);
     }
   }
 
