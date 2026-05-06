@@ -5,12 +5,27 @@ import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
 import { buildProviderRequest, extractTaskParams } from "@/lib/jobs/provider-payload";
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
+import { shouldRequeueAfterPass } from "@/lib/jobs/actionable";
 
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
 
 export async function processNextQueuedJob(logger: Pick<Console, "info" | "error"> = console): Promise<string | null> {
-  const queued = await prisma.generationJob.findFirst({ where: { status: "queued" }, orderBy: { createdAt: "asc" } });
+  const now = new Date();
+  const queued = await prisma.generationJob.findFirst({
+    where: {
+      status: "queued",
+      tasks: {
+        some: {
+          OR: [
+            { status: "queued" },
+            { status: "failed", nextAttemptAt: { lte: now }, attempts: { lt: WORKER_MAX_ATTEMPTS } }
+          ]
+        }
+      }
+    },
+    orderBy: { createdAt: "asc" }
+  });
   if (!queued) return null;
 
   const claim = await prisma.generationJob.updateMany({
@@ -22,7 +37,6 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
   logger.info(`[worker] job claimed ${queued.id}`);
   const provider = getProvider(queued.provider as "openai");
 
-  const now = new Date();
   const tasks = await prisma.generationTask.findMany({
     where: {
       jobId: queued.id,
@@ -75,7 +89,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
       const normalized = normalizeProviderError(error);
       const latest = await prisma.generationTask.findUnique({ where: { id: task.id } });
       const attempts = (latest?.attempts ?? 0) + 1;
-      const canRetry = shouldRetry(attempts, latest?.maxAttempts ?? WORKER_MAX_ATTEMPTS);
+      const canRetry = normalized.retryable && shouldRetry(attempts, latest?.maxAttempts ?? WORKER_MAX_ATTEMPTS);
 
       await prisma.generationTask.update({
         where: { id: task.id },
@@ -95,11 +109,9 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
   }
 
   const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queued.id } });
-  const unresolved = finishedTasks.some((t: { status: string; attempts: number; maxAttempts: number }) => t.status === "queued" || (t.status === "failed" && t.attempts < t.maxAttempts));
-
-  if (unresolved) {
+  if (shouldRequeueAfterPass(finishedTasks as Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt?: Date | null }>, new Date())) {
     await prisma.generationJob.update({ where: { id: queued.id }, data: { status: "queued" } });
-    logger.info(`[worker] job re-queued ${queued.id}`);
+    logger.info(`[worker] job waiting ${queued.id}`);
     return queued.id;
   }
 
