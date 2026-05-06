@@ -20,6 +20,7 @@ test("images DTO does not include outputPath", () => {
     outputPath: "/secret/path/image.png"
   });
   assert.equal("outputPath" in dto, false);
+  assert.equal("responseMetadataJson" in dto, false);
 });
 
 test("completed task DTO includes imageUrl", () => {

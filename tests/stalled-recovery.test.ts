@@ -31,3 +31,21 @@ test("queued actionable tasks keep job queued", () => {
   const status = reconcileJobStatusFromTasks([{ status: "queued", attempts: 0, maxAttempts: 3, nextAttemptAt: null }]);
   assert.equal(status, "queued");
 });
+
+test("failed task without nextAttemptAt is terminal even when attempts remain", () => {
+  const status = reconcileJobStatusFromTasks([{ status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: null }]);
+  assert.equal(status, "failed");
+});
+
+test("stalled job with completed and terminal failed tasks becomes partial_failed", () => {
+  const status = reconcileJobStatusFromTasks([
+    { status: "completed", attempts: 0, maxAttempts: 3, nextAttemptAt: null },
+    { status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: null }
+  ]);
+  assert.equal(status, "partial_failed");
+});
+
+test("stalled job with failed task scheduled in future remains queued", () => {
+  const status = reconcileJobStatusFromTasks([{ status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: new Date("2026-01-01T00:10:00Z") }]);
+  assert.equal(status, "queued");
+});

@@ -14,7 +14,7 @@ type JobTask = {
   lastError?: string | null;
   provider: string;
   model: string;
-  responseMetadataJson?: string | null;
+  providerError?: { title?: string; designerMessage?: string; technicalMessage?: string; suggestedAction?: string } | null;
   imageUrl: string | null;
 };
 
@@ -187,9 +187,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {tasks.map((task) => {
-              const providerError = task.responseMetadataJson ? (() => {
-                try { return JSON.parse(task.responseMetadataJson).providerError; } catch { return null; }
-              })() : null;
+              const providerError = task.providerError;
 
               return (
                 <div key={task.id} className="rounded-xl border bg-white p-3 shadow-sm">
@@ -206,7 +204,7 @@ export default function DashboardPage() {
                   {task.status === "failed" ? (
                     <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
                       <p className="font-semibold text-rose-800">{providerError?.title ?? task.errorMessage ?? "Image generation failed"}</p>
-                      <p className="text-rose-700">{providerError?.designerMessage ?? "Please check technical details and retry."}</p>
+                      <p className="text-rose-700">{providerError?.designerMessage ?? "Please check technical details and retry."}{providerError?.suggestedAction ? ` Suggested action: ${providerError.suggestedAction}` : ""}</p>
                       <details className="mt-1 text-xs text-rose-900">
                         <summary>Technical details</summary>
                         <p>{providerError?.technicalMessage ?? task.lastError ?? task.errorMessage}</p>

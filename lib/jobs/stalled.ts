@@ -17,8 +17,12 @@ export function shouldRetryAfterStall(task: StalledTask): boolean {
   return task.status === "processing" && task.attempts + 1 < task.maxAttempts;
 }
 
+function isRetryScheduled(task: { status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }): boolean {
+  return task.status === "failed" && task.attempts < task.maxAttempts && !!task.nextAttemptAt;
+}
+
 export function reconcileJobStatusFromTasks(tasks: Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }>): "queued" | "completed" | "partial_failed" | "failed" {
-  const hasUnresolved = tasks.some((t) => t.status === "queued" || (t.status === "failed" && t.attempts < t.maxAttempts));
+  const hasUnresolved = tasks.some((t) => t.status === "queued" || isRetryScheduled(t));
   if (hasUnresolved) return "queued";
   return aggregateJobStatus(tasks.map((t) => t.status as TaskLikeStatus));
 }

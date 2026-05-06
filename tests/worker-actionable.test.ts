@@ -18,3 +18,9 @@ test("due retry task is actionable", () => {
   const tasks = [{ status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: new Date("2025-12-31T23:00:00Z") }];
   assert.equal(hasActionableTask(tasks, now), true);
 });
+
+
+test("terminal failed task with no nextAttemptAt is not actionable", () => {
+  const tasks = [{ status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: null }];
+  assert.equal(hasActionableTask(tasks, now), false);
+});
