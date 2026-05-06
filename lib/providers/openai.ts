@@ -1,43 +1,62 @@
 import OpenAI from "openai";
 import { getOpenAIConfig } from "@/lib/env";
-import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/lib/providers/types";
 
 type Payload = Record<string, unknown>;
 
+function isGptImage(model: string): boolean {
+  return model.startsWith("gpt-image");
+}
+
+function isDalle3(model: string): boolean {
+  return model === "dall-e-3";
+}
+
+function isDalle2(model: string): boolean {
+  return model === "dall-e-2";
+}
+
 export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payload {
   const safeCount = 1;
-  const spec = assertSupportedOpenAIModel(request.model);
-  const safeSize = spec.allowedSizes.includes(request.size ?? "") ? request.size : spec.allowedSizes[0];
+  const model = request.model;
 
-  if (spec.family === "gpt-image") {
+  if (isGptImage(model)) {
     return {
-      model: spec.id,
+      model,
       prompt: request.prompt,
-      size: safeSize,
-      quality: spec.allowedQualities.includes(request.quality ?? "low") ? request.quality : "high",
+      size: request.size ?? "1024x1024",
+      quality: (["low", "medium", "high", "auto"].includes(request.quality ?? "") ? request.quality : "high"),
       n: safeCount
     };
   }
 
-  if (spec.family === "dall-e-3") {
+  if (isDalle3(model)) {
+    const safeQuality = request.quality === "hd" ? "hd" : "standard";
+    const allowedSizes = new Set(["1024x1024", "1792x1024", "1024x1792"]);
+    const safeSize = allowedSizes.has(request.size ?? "") ? request.size : "1024x1024";
     return {
-      model: spec.id,
+      model,
       prompt: request.prompt,
       size: safeSize,
-      quality: request.quality === "hd" ? "hd" : "standard",
+      quality: safeQuality,
       response_format: "b64_json",
       n: safeCount
     };
   }
 
-  return {
-    model: spec.id,
-    prompt: request.prompt,
-    size: safeSize,
-    response_format: "b64_json",
-    n: safeCount
-  };
+  if (isDalle2(model)) {
+    const allowedSizes = new Set(["256x256", "512x512", "1024x1024"]);
+    const safeSize = allowedSizes.has(request.size ?? "") ? request.size : "1024x1024";
+    return {
+      model,
+      prompt: request.prompt,
+      size: safeSize,
+      response_format: "b64_json",
+      n: safeCount
+    };
+  }
+
+  throw new Error(`Unsupported OpenAI image model: ${model}`);
 }
 
 export async function decodeOpenAIImage(response: OpenAI.Images.ImagesResponse): Promise<Buffer> {

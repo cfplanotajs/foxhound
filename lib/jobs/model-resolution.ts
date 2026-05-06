@@ -13,6 +13,6 @@ export function resolveProviderAndModel(input: {
   }
 
   const envDefaultModel = getEnv().OPENAI_IMAGE_MODEL?.trim();
-  const model = input.modelFromBody?.trim() || envDefaultModel || input.presetDefaultModel || null;
+  const model = envDefaultModel || input.modelFromBody?.trim() || input.presetDefaultModel || null;
   return { provider: "openai", model };
 }

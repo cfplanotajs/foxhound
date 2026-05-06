@@ -83,7 +83,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ jobId: job.id, status: "queued" });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    if (error instanceof Error && error.message === "Preset default model is not supported by this app configuration.") return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && error.message === MISSING_OPENAI_KEY_MESSAGE) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
