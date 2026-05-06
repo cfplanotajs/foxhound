@@ -5,7 +5,7 @@ export interface NormalizedImageRequest {
   model: string;
   prompt: string;
   size?: string;
-  quality?: "low" | "medium" | "high" | "auto";
+  quality?: "low" | "medium" | "high" | "auto" | "standard" | "hd";
   count?: number;
 }
 

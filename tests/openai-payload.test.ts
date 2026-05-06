@@ -2,16 +2,29 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildOpenAIImagePayload, decodeOpenAIImage } from "../lib/providers/openai.ts";
 
-test("GPT image payload does not include response_format", () => {
-  const payload = buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 3, size: "1024x1024", quality: "high" });
+test("GPT image payload uses GPT-compatible quality and no response_format", () => {
+  const payload = buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 4, size: "1024x1024", quality: "high" });
   assert.equal("response_format" in payload, false);
   assert.equal(payload.n, 1);
 });
 
-test("non-GPT payload requests b64_json", () => {
+test("dall-e-3 quality normalizes to standard/hd only", () => {
+  const standard = buildOpenAIImagePayload({ provider: "openai", model: "dall-e-3", prompt: "cat", count: 3, size: "1024x1024", quality: "high" });
+  assert.equal(standard.quality, "standard");
+  const hd = buildOpenAIImagePayload({ provider: "openai", model: "dall-e-3", prompt: "cat", count: 3, size: "1024x1024", quality: "hd" as never });
+  assert.equal(hd.quality, "hd");
+  assert.equal(hd.n, 1);
+});
+
+test("dall-e-2 payload omits invalid high quality", () => {
   const payload = buildOpenAIImagePayload({ provider: "openai", model: "dall-e-2", prompt: "cat", count: 2, size: "1024x1024", quality: "high" });
+  assert.equal("quality" in payload, false);
   assert.equal(payload.response_format, "b64_json");
-  assert.equal(payload.n, 2);
+  assert.equal(payload.n, 1);
+});
+
+test("unsupported model rejects clearly", () => {
+  assert.throws(() => buildOpenAIImagePayload({ provider: "openai", model: "weird-model", prompt: "cat", count: 1 }), /Unsupported OpenAI image model/);
 });
 
 test("GPT response parses b64_json correctly", async () => {
@@ -22,6 +35,10 @@ test("GPT response parses b64_json correctly", async () => {
 test("non-GPT b64_json response decodes correctly", async () => {
   const bytes = await decodeOpenAIImage({ data: [{ b64_json: Buffer.from("abc").toString("base64") }] } as never);
   assert.equal(bytes.toString("utf8"), "abc");
+});
+
+test("multiple outputs are rejected for one-task-one-image invariant", async () => {
+  await assert.rejects(() => decodeOpenAIImage({ data: [{ b64_json: Buffer.from("a").toString("base64") }, { b64_json: Buffer.from("b").toString("base64") }] } as never), /one image per task/);
 });
 
 test("missing b64_json with url response returns clear error when fetch fails", async () => {

@@ -1,6 +1,6 @@
 export interface StoredTaskParams {
   size?: string;
-  quality?: "low" | "medium" | "high" | "auto";
+  quality?: "low" | "medium" | "high" | "auto" | "standard" | "hd";
   count?: number;
 }
 
@@ -9,7 +9,7 @@ interface ParsedPayload {
   taskParams?: StoredTaskParams;
   providerPayload?: Record<string, unknown>;
   size?: string;
-  quality?: "low" | "medium" | "high" | "auto";
+  quality?: StoredTaskParams["quality"];
   count?: number;
 }
 
@@ -24,18 +24,15 @@ export function parseStoredPayload(requestPayloadJson?: string | null): ParsedPa
 
 export function extractTaskParams(requestPayloadJson?: string | null): StoredTaskParams {
   const parsed = parseStoredPayload(requestPayloadJson);
-  if (parsed.taskParams) return parsed.taskParams;
-  if (parsed.params) return parsed.params;
-
-  // legacy flattened payload support
+  if (parsed.taskParams) return { ...parsed.taskParams, count: 1 };
+  if (parsed.params) return { ...parsed.params, count: 1 };
   if (parsed.size || parsed.quality || parsed.count) {
     return {
       size: parsed.size,
       quality: parsed.quality,
-      count: parsed.count
+      count: 1
     };
   }
-
   return {};
 }
 
@@ -46,8 +43,9 @@ export function buildProviderRequest(input: {
   params?: StoredTaskParams;
 }) {
   const params = input.params ?? {};
-  const requestedCount = params.count ?? 1;
-  const safeCount = input.provider === "openai" && input.model.startsWith("gpt-image") ? 1 : requestedCount;
+  // MVP invariant: one task = one generated image.
+  // TODO: support true multi-output assets with a dedicated Asset table.
+  const safeCount = 1;
   return {
     provider: input.provider,
     model: input.model,
@@ -59,5 +57,5 @@ export function buildProviderRequest(input: {
 }
 
 export function serializeTaskPayload(taskParams: StoredTaskParams, providerPayload: Record<string, unknown>) {
-  return JSON.stringify({ taskParams, providerPayload });
+  return JSON.stringify({ taskParams: { ...taskParams, count: 1 }, providerPayload });
 }

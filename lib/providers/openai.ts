@@ -2,33 +2,75 @@ import OpenAI from "openai";
 import { getEnv } from "@/lib/env";
 import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/lib/providers/types";
 
-export function buildOpenAIImagePayload(request: NormalizedImageRequest) {
-  const requestedCount = request.count ?? 1;
-  const isGptImage = request.model.startsWith("gpt-image");
-  const safeCount = isGptImage ? 1 : requestedCount;
-  return {
-    model: request.model,
-    prompt: request.prompt,
-    size: (request.size as "1024x1024" | "auto" | "1536x1024" | "1024x1536" | "256x256" | "512x512" | "1792x1024" | "1024x1792" | undefined) ?? "1024x1024",
-    quality: request.quality ?? "high",
-    n: safeCount,
-    ...(isGptImage ? {} : { response_format: "b64_json" as const })
-  } as const;
+type Payload = Record<string, unknown>;
+
+function isGptImage(model: string): boolean {
+  return model.startsWith("gpt-image");
+}
+
+function isDalle3(model: string): boolean {
+  return model === "dall-e-3";
+}
+
+function isDalle2(model: string): boolean {
+  return model === "dall-e-2";
+}
+
+export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payload {
+  const safeCount = 1;
+  const model = request.model;
+
+  if (isGptImage(model)) {
+    return {
+      model,
+      prompt: request.prompt,
+      size: request.size ?? "1024x1024",
+      quality: (["low", "medium", "high", "auto"].includes(request.quality ?? "") ? request.quality : "high"),
+      n: safeCount
+    };
+  }
+
+  if (isDalle3(model)) {
+    const safeQuality = request.quality === "hd" ? "hd" : "standard";
+    const allowedSizes = new Set(["1024x1024", "1792x1024", "1024x1792"]);
+    const safeSize = allowedSizes.has(request.size ?? "") ? request.size : "1024x1024";
+    return {
+      model,
+      prompt: request.prompt,
+      size: safeSize,
+      quality: safeQuality,
+      response_format: "b64_json",
+      n: safeCount
+    };
+  }
+
+  if (isDalle2(model)) {
+    const allowedSizes = new Set(["256x256", "512x512", "1024x1024"]);
+    const safeSize = allowedSizes.has(request.size ?? "") ? request.size : "1024x1024";
+    return {
+      model,
+      prompt: request.prompt,
+      size: safeSize,
+      response_format: "b64_json",
+      n: safeCount
+    };
+  }
+
+  throw new Error(`Unsupported OpenAI image model: ${model}`);
 }
 
 export async function decodeOpenAIImage(response: OpenAI.Images.ImagesResponse): Promise<Buffer> {
   const first = response.data?.[0];
   if (!first) throw new Error("OpenAI response did not include image data");
-
-  if (first.b64_json) {
-    return Buffer.from(first.b64_json, "base64");
+  if ((response.data?.length ?? 0) > 1) {
+    throw new Error("OpenAI returned multiple images for one task; MVP currently supports one image per task.");
   }
+
+  if (first.b64_json) return Buffer.from(first.b64_json, "base64");
 
   if (first.url) {
     const imageRes = await fetch(first.url);
-    if (!imageRes.ok) {
-      throw new Error(`OpenAI image URL fetch failed with status ${imageRes.status}`);
-    }
+    if (!imageRes.ok) throw new Error(`OpenAI image URL fetch failed with status ${imageRes.status}`);
     const arr = await imageRes.arrayBuffer();
     return Buffer.from(arr);
   }
@@ -45,7 +87,7 @@ export class OpenAIProvider implements ImageProvider {
 
   async generateImage(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
     const payload = buildOpenAIImagePayload(request);
-    const response = await this.client.images.generate(payload);
+    const response = await this.client.images.generate(payload as never);
     const bytes = await decodeOpenAIImage(response);
 
     return {

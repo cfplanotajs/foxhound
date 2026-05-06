@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
 import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
 import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
+import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
@@ -36,8 +37,24 @@ export async function POST(request: Request) {
 
     let job;
     try {
-      job = await prisma.generationJob.create({
-        data: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey }
+      job = await createJobAndTasksAtomic(prisma as never, {
+        jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey },
+        taskData: subjectPrompts.map((subjectPrompt) => ({
+            presetId: preset.id,
+            presetName: preset.name,
+            presetVersion: preset.version,
+            stylePromptSnapshot: preset.stylePrompt,
+            subjectPrompt,
+            finalPrompt: composePrompt(preset.stylePrompt, subjectPrompt, body.constraints),
+            constraints: body.constraints?.trim() || null,
+            provider,
+            model,
+            status: "queued",
+            attempts: 0,
+            maxAttempts: WORKER_MAX_ATTEMPTS,
+            nextAttemptAt: null,
+            requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model })
+          }))
       });
     } catch (error) {
       if (body.idempotencyKey && isIdempotencyCollisionError(error)) {
@@ -46,26 +63,6 @@ export async function POST(request: Request) {
       }
       throw error;
     }
-
-    await prisma.generationTask.createMany({
-      data: subjectPrompts.map((subjectPrompt) => ({
-        jobId: job.id,
-        presetId: preset.id,
-        presetName: preset.name,
-        presetVersion: preset.version,
-        stylePromptSnapshot: preset.stylePrompt,
-        subjectPrompt,
-        finalPrompt: composePrompt(preset.stylePrompt, subjectPrompt, body.constraints),
-        constraints: body.constraints?.trim() || null,
-        provider,
-        model,
-        status: "queued",
-        attempts: 0,
-        maxAttempts: WORKER_MAX_ATTEMPTS,
-        nextAttemptAt: null,
-        requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model })
-      }))
-    });
 
     return NextResponse.json({ jobId: job.id, status: "queued" });
   } catch (error) {
