@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import presets from "@/config/presets.json";
 import { prisma } from "@/lib/db";
-import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
 
 export type DbPresetView = {
   id: string;
@@ -51,10 +50,6 @@ export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise
       update: { name: String(item.name), description: String(item.description), isArchived: false },
       create: { stableKey, name: String(item.name), description: String(item.description), isArchived: false }
     });
-
-    if (String(item.defaultProvider) === "openai" && !isSupportedOpenAIModel(String(item.defaultModel))) {
-      throw new Error("Preset default model is not supported by this app configuration.");
-    }
 
     const contentHash = hashPresetContent({
       stylePrompt: String(item.stylePrompt),

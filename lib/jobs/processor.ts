@@ -5,7 +5,7 @@ import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
 import { buildProviderRequest, extractTaskParams, serializeTaskPayload } from "@/lib/jobs/provider-payload";
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
-import { hasActionableTask, shouldRequeueAfterPass } from "@/lib/jobs/actionable";
+import { shouldRequeueAfterPass } from "@/lib/jobs/actionable";
 import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
 
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
@@ -71,22 +71,20 @@ export async function recoverStalledProcessingJobs(logger: Pick<Console, "info" 
 export async function processNextQueuedJob(logger: Pick<Console, "info" | "error"> = console): Promise<string | null> {
   await recoverStalledProcessingJobs(logger);
   const now = new Date();
-  const queuedCandidates = await prisma.generationJob.findMany({
+  const queued = await prisma.generationJob.findFirst({
     where: {
       status: "queued",
       tasks: {
         some: {
           OR: [
             { status: "queued" },
-            { status: "failed", nextAttemptAt: { lte: now } }
+            { status: "failed", nextAttemptAt: { lte: now }, attempts: { lt: WORKER_MAX_ATTEMPTS } }
           ]
         }
       }
     },
-    orderBy: { createdAt: "asc" },
-    include: { tasks: true }
+    orderBy: { createdAt: "asc" }
   });
-  const queued = queuedCandidates.find((job) => hasActionableTask(job.tasks as Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt?: Date | null }>, now));
   if (!queued) return null;
 
   const claim = await prisma.generationJob.updateMany({
@@ -109,21 +107,19 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
       jobId: queued.id,
       OR: [
         { status: "queued" },
-        { status: "failed", nextAttemptAt: { lte: now } }
+        { status: "failed", nextAttemptAt: { lte: now }, attempts: { lt: WORKER_MAX_ATTEMPTS } }
       ]
     },
     orderBy: { createdAt: "asc" }
   });
 
   for (const task of tasks) {
-    if (task.status === "failed" && !(task.attempts < task.maxAttempts && !!task.nextAttemptAt && task.nextAttemptAt <= new Date())) continue;
-
     const taskClaim = await prisma.generationTask.updateMany({
       where: {
         id: task.id,
         OR: [
           { status: "queued" },
-          { status: "failed", nextAttemptAt: { lte: new Date() } }
+          { status: "failed", attempts: { lt: WORKER_MAX_ATTEMPTS }, nextAttemptAt: { lte: new Date() } }
         ]
       },
       data: { status: "processing", startedAt: new Date() }

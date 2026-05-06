@@ -41,9 +41,6 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<JobTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showManager, setShowManager] = useState(false);
-  const [managerName, setManagerName] = useState("");
-  const [managerPrompt, setManagerPrompt] = useState("");
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -120,39 +117,6 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   }
 
-
-  const samplePrompts: Record<string, string> = {
-    kids_vector_card_illustration_v1: "A cheerful raccoon explorer holding a giant map, bold 2D cartoon card-game style, no text",
-    clean_sticker_character_white_bg_v1: "A cute fox wearing a tiny backpack, isolated on white background, clean die-cut sticker style",
-    storybook_habitat_background_concept_v1: "A warm educational kelp forest habitat background with sea otters, fish, and sunlight rays, not too busy",
-    amazon_photoreal_lifestyle_product_v1: "A bright realistic lifestyle photo of a child using an educational sticker book at a wooden table"
-  };
-
-  async function createPresetFromManager() {
-    const stableKey = managerName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    const res = await fetch("/api/presets/manage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create",
-        stableKey,
-        name: managerName,
-        description: "Created from Preset Manager",
-        stylePrompt: managerPrompt,
-        defaultProvider: provider,
-        defaultModel: model,
-        defaultParams: { size: "1024x1024", quality: "high", count: 1 },
-        samplePrompt: managerPrompt,
-        contentHash: `${stableKey}-${Date.now()}`
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) return setError(data.error ?? "Failed to create preset");
-    setManagerName("");
-    setManagerPrompt("");
-    await loadPresets();
-  }
-
   const counts = {
     complete: tasks.filter((t) => t.status === "completed").length,
     failed: tasks.filter((t) => t.status === "failed").length,
@@ -169,7 +133,7 @@ export default function DashboardPage() {
             <div key={step} className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700">{step}</div>
           ))}
         </div>
-      <div className="mt-4"><button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => setShowManager((v) => !v)}>{showManager ? "Hide Preset Manager" : "Manage Presets"}</button></div></header>
+      </header>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl bg-white p-5 shadow-sm">
@@ -195,7 +159,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{Object.entries(samplePrompts).map(([presetKey, prompt]) => <button key={presetKey} type="button" className="rounded bg-slate-100 px-2 py-1 text-xs" onClick={() => { setPresetId(presetKey); setSinglePrompt(prompt); }}>{presetKey.split("_")[0]} sample</button>)}</div>
+          <h2 className="mb-3 text-lg font-semibold">Prompt</h2>
           {error ? <p className="mb-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{error}</p> : null}
           <label className="grid gap-1 text-sm"><span className="font-medium">Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-20 rounded border p-2" /></label>
           <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-24 rounded border p-2" /></label>
@@ -204,19 +168,6 @@ export default function DashboardPage() {
           <button disabled={loading || !formValid} className="mt-3 rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={submitJob}>{loading ? "Submitting..." : "Submit Job"}</button>
         </div>
       </section>
-
-      
-      {showManager ? (
-        <section className="rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Preset Manager</h2>
-          <p className="text-sm text-slate-600">Create presets and versions without editing JSON.</p>
-          <div className="mt-3 grid gap-2">
-            <input value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Preset name" className="rounded border p-2" />
-            <textarea value={managerPrompt} onChange={(e) => setManagerPrompt(e.target.value)} placeholder="Style prompt" className="rounded border p-2 min-h-20" />
-            <button type="button" className="rounded bg-blue-600 px-3 py-2 text-white" onClick={createPresetFromManager}>Create Preset</button>
-          </div>
-        </section>
-      ) : null}
 
       {jobId && (
         <section className="rounded-2xl bg-white p-5 shadow-sm">
