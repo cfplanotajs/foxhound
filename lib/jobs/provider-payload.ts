@@ -4,14 +4,39 @@ export interface StoredTaskParams {
   count?: number;
 }
 
-export function extractTaskParams(requestPayloadJson?: string | null): StoredTaskParams {
+interface ParsedPayload {
+  params?: StoredTaskParams;
+  taskParams?: StoredTaskParams;
+  providerPayload?: Record<string, unknown>;
+  size?: string;
+  quality?: "low" | "medium" | "high" | "auto";
+  count?: number;
+}
+
+export function parseStoredPayload(requestPayloadJson?: string | null): ParsedPayload {
   if (!requestPayloadJson) return {};
   try {
-    const parsed = JSON.parse(requestPayloadJson) as { params?: StoredTaskParams };
-    return parsed.params ?? {};
+    return JSON.parse(requestPayloadJson) as ParsedPayload;
   } catch {
     return {};
   }
+}
+
+export function extractTaskParams(requestPayloadJson?: string | null): StoredTaskParams {
+  const parsed = parseStoredPayload(requestPayloadJson);
+  if (parsed.taskParams) return parsed.taskParams;
+  if (parsed.params) return parsed.params;
+
+  // legacy flattened payload support
+  if (parsed.size || parsed.quality || parsed.count) {
+    return {
+      size: parsed.size,
+      quality: parsed.quality,
+      count: parsed.count
+    };
+  }
+
+  return {};
 }
 
 export function buildProviderRequest(input: {
@@ -31,4 +56,8 @@ export function buildProviderRequest(input: {
     quality: params.quality ?? "high",
     count: safeCount
   } as const;
+}
+
+export function serializeTaskPayload(taskParams: StoredTaskParams, providerPayload: Record<string, unknown>) {
+  return JSON.stringify({ taskParams, providerPayload });
 }

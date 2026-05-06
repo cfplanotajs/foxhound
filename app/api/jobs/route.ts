@@ -6,6 +6,7 @@ import { getPresetById } from "@/lib/presets";
 import { getEnv } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
 import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
+import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
         attempts: 0,
         maxAttempts: WORKER_MAX_ATTEMPTS,
         nextAttemptAt: null,
-        requestPayloadJson: JSON.stringify({ model, params: preset.defaultParams })
+        requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model })
       }))
     });
 

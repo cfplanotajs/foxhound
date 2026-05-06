@@ -3,7 +3,7 @@ import { getProvider } from "@/lib/providers";
 import { saveImage } from "@/lib/storage";
 import { aggregateJobStatus, TaskLikeStatus } from "@/lib/jobs/status";
 import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
-import { buildProviderRequest, extractTaskParams } from "@/lib/jobs/provider-payload";
+import { buildProviderRequest, extractTaskParams, serializeTaskPayload } from "@/lib/jobs/provider-payload";
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 import { shouldRequeueAfterPass } from "@/lib/jobs/actionable";
 
@@ -70,7 +70,9 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
       });
       await prisma.generationTask.update({
         where: { id: task.id },
-        data: { requestPayloadJson: JSON.stringify(providerRequest) }
+        data: {
+          requestPayloadJson: serializeTaskPayload(extractTaskParams(task.requestPayloadJson), providerRequest)
+        }
       });
       const result = await provider.generateImage(providerRequest);
 
