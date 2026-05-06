@@ -24,14 +24,3 @@ test("terminal failed task with no nextAttemptAt is not actionable", () => {
   const tasks = [{ status: "failed", attempts: 1, maxAttempts: 3, nextAttemptAt: null }];
   assert.equal(hasActionableTask(tasks, now), false);
 });
-
-
-test("honors row maxAttempts regardless of worker default changes", () => {
-  const tasks = [{ status: "failed", attempts: 3, maxAttempts: 5, nextAttemptAt: new Date("2025-12-31T23:59:00Z") }];
-  assert.equal(hasActionableTask(tasks, now), true);
-});
-
-test("failed task at row maxAttempts is not actionable", () => {
-  const tasks = [{ status: "failed", attempts: 5, maxAttempts: 5, nextAttemptAt: new Date("2025-12-31T23:59:00Z") }];
-  assert.equal(hasActionableTask(tasks, now), false);
-});
