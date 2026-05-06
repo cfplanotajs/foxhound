@@ -6,7 +6,7 @@ const MISSING_OPENAI_KEY_MESSAGE = "OpenAI API key is missing. Add OPENAI_API_KE
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_IMAGE_MODEL: z.string().min(1).default("gpt-image-2")
+  OPENAI_IMAGE_MODEL: z.string().min(1).optional()
 });
 
 type AppEnv = z.infer<typeof envSchema>;

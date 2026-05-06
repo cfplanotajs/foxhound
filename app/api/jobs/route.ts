@@ -9,6 +9,8 @@ import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
 import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
 import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
 import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
+import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
@@ -17,7 +19,9 @@ const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
 export async function POST(request: Request) {
   try {
     getEnv();
-    const body = createJobSchema.parse(await request.json());
+    const parsedBody = await parseJsonBody(request);
+    if (!parsedBody.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const body = createJobSchema.parse(parsedBody.data);
     await seedPresetsFromConfig();
     const preset = await getPresetByStableKey(body.presetId);
     if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 400 });
@@ -27,11 +31,15 @@ export async function POST(request: Request) {
       if (existing) return NextResponse.json({ jobId: existing.id, deduped: true });
     }
 
-    const provider = body.provider ?? preset.defaultProvider;
-    const model = body.model;
+    const { provider, model } = resolveProviderAndModel({
+      providerFromBody: body.provider,
+      modelFromBody: body.model,
+      presetDefaultProvider: preset.defaultProvider,
+      presetDefaultModel: preset.defaultModel
+    });
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
-    ensureJobProviderConfigured(provider as "openai" | "mock");
+    ensureJobProviderConfigured(provider);
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
     const single = body.singlePrompt?.trim();

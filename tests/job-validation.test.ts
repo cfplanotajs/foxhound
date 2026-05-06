@@ -21,12 +21,9 @@ test("missing preset returns clear validation error", () => {
   }
 });
 
-test("missing model returns clear validation error", () => {
-  const result = createJobSchema.safeParse({ presetId: "p1", singlePrompt: "cat", model: "" });
-  assert.equal(result.success, false);
-  if (!result.success) {
-    assert.equal(result.error.issues[0]?.message, "Model is required.");
-  }
+test("missing model can be resolved by server defaults", () => {
+  const result = createJobSchema.safeParse({ presetId: "p1", singlePrompt: "cat" });
+  assert.equal(result.success, true);
 });
 
 test("valid single prompt request passes validation", () => {
