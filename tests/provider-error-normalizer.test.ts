@@ -25,3 +25,10 @@ test("unknown maps safely", () => {
   assert.equal(n.kind, "unknown");
   assert.equal(n.title, "Image generation failed");
 });
+
+
+test("missing key error maps to setup guidance", () => {
+  const n = normalizeProviderError(new Error("OpenAI API key is missing. Add OPENAI_API_KEY to the server .env file, or use Demo Mode."));
+  assert.equal(n.kind, "auth");
+  assert.match(n.designerMessage, /Demo Mode/);
+});

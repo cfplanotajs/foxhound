@@ -72,7 +72,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
   if (claim.count !== 1) return null;
 
   logger.info(`[worker] job claimed ${queued.id}`);
-  const provider = getProvider(queued.provider as "openai");
+  const provider = getProvider(queued.provider as "openai" | "mock");
 
   const tasks = await prisma.generationTask.findMany({
     where: {
@@ -100,10 +100,11 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
 
     try {
       const providerRequest = buildProviderRequest({
-        provider: queued.provider as "openai",
+        provider: queued.provider as "openai" | "mock",
         model: task.model,
         prompt: task.finalPrompt,
-        params: extractTaskParams(task.requestPayloadJson)
+        params: extractTaskParams(task.requestPayloadJson),
+        presetName: task.presetName
       });
       await prisma.generationTask.update({
         where: { id: task.id },

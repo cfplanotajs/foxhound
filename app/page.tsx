@@ -67,7 +67,7 @@ export default function DashboardPage() {
     if (!presetId) return setError("Preset is required.");
     if (!provider) return setError("Provider is required.");
     if (!model.trim()) return setError("Model is required.");
-    if (!promptValid) return setError("Please provide at least one prompt line.");
+    if (!promptValid) return setError("Enter at least one prompt.");
 
     setLoading(true);
     const idempotencyKey = crypto.randomUUID();
@@ -153,7 +153,7 @@ export default function DashboardPage() {
           ) : null}
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="grid gap-1 text-sm"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="openai">OpenAI</option></select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="mock">Demo Mode (Mock)</option><option value="openai">OpenAI</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Model</span><input value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2" /></label>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                   <div className="mb-2">{statusChip(task.status)}</div>
                   <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
                   <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
-                  <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>
+                  <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
 
                   {task.status === "failed" ? (
                     <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">

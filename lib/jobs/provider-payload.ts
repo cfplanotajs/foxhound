@@ -37,10 +37,11 @@ export function extractTaskParams(requestPayloadJson?: string | null): StoredTas
 }
 
 export function buildProviderRequest(input: {
-  provider: "openai";
+  provider: "openai" | "mock";
   model: string;
   prompt: string;
   params?: StoredTaskParams;
+  presetName?: string;
 }) {
   const params = input.params ?? {};
   // MVP invariant: one task = one generated image.
@@ -52,7 +53,8 @@ export function buildProviderRequest(input: {
     prompt: input.prompt,
     size: params.size ?? "1024x1024",
     quality: params.quality ?? "high",
-    count: safeCount
+    count: safeCount,
+    presetName: input.presetName
   } as const;
 }
 

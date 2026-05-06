@@ -32,14 +32,14 @@ export function normalizeProviderError(error: unknown): NormalizedProviderError 
     };
   }
 
-  if (raw.includes("invalid api key") || raw.includes("incorrect api key") || raw.includes("authentication")) {
+  if (raw.includes("openai api key is missing") || raw.includes("invalid api key") || raw.includes("incorrect api key") || raw.includes("authentication")) {
     return {
       kind: "auth",
       title: "OpenAI API key problem",
-      designerMessage: "The API key is missing or invalid. Ask the app owner to check server settings.",
+      designerMessage: "OpenAI API key is missing. Add OPENAI_API_KEY to the server .env file, or use Demo Mode.",
       technicalMessage,
       retryable: false,
-      suggestedAction: "Verify OPENAI_API_KEY in server environment settings."
+      suggestedAction: "Add OPENAI_API_KEY to server env, or switch to Demo Mode (mock)."
     };
   }
 

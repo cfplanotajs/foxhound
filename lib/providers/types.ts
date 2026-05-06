@@ -1,4 +1,4 @@
-export type ProviderName = "openai";
+export type ProviderName = "openai" | "mock";
 
 export interface NormalizedImageRequest {
   provider: ProviderName;
@@ -7,6 +7,7 @@ export interface NormalizedImageRequest {
   size?: string;
   quality?: "low" | "medium" | "high" | "auto" | "standard" | "hd";
   count?: number;
+  presetName?: string;
 }
 
 export interface NormalizedImageResult {

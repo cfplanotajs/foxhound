@@ -82,7 +82,9 @@ export class OpenAIProvider implements ImageProvider {
   private client: OpenAI;
 
   constructor() {
-    this.client = new OpenAI({ apiKey: getEnv().OPENAI_API_KEY });
+    const apiKey = getEnv().OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OpenAI API key is missing. Add OPENAI_API_KEY to the server .env file, or use Demo Mode.");
+    this.client = new OpenAI({ apiKey });
   }
 
   async generateImage(request: NormalizedImageRequest): Promise<NormalizedImageResult> {

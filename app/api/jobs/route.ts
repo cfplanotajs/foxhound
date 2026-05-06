@@ -26,13 +26,13 @@ export async function POST(request: Request) {
 
     const provider = body.provider ?? preset.defaultProvider;
     const model = body.model;
-    if (!provider) return NextResponse.json({ error: "Provider is required" }, { status: 400 });
-    if (!model) return NextResponse.json({ error: "Model is required" }, { status: 400 });
+    if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
+    if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
     const single = body.singlePrompt?.trim();
     const subjectPrompts = [...(single ? [single] : []), ...lines];
-    if (subjectPrompts.length === 0) return NextResponse.json({ error: "Please provide at least one prompt" }, { status: 400 });
+    if (subjectPrompts.length === 0) return NextResponse.json({ error: "Enter at least one prompt." }, { status: 400 });
     if (subjectPrompts.length > MAX_PROMPT_LINES) return NextResponse.json({ error: "Too many prompt lines" }, { status: 400 });
 
     let job;
