@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { Prisma } from "@prisma/client";
 import presets from "@/config/presets.json";
 import { prisma } from "@/lib/db";
 import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
@@ -16,6 +15,9 @@ export type DbPresetView = {
   defaultProvider: string;
   defaultModel: string;
   defaultParams: Record<string, unknown>;
+  bestUseLabel: string | null;
+  samplePrompt: string | null;
+  isArchived: boolean;
 };
 
 function hashPresetContent(input: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParams: Record<string, unknown> }) {
@@ -27,7 +29,7 @@ function nextVersionTag(current?: string | null) {
   return `v${n + 1}`;
 }
 
-async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, payload: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParamsJson: string; contentHash: string }) {
+async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, payload: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParamsJson: string; samplePrompt?: string | null; contentHash: string }) {
   const existing = await db.presetVersion.findUnique({ where: { presetId_contentHash: { presetId, contentHash: payload.contentHash } } });
   if (existing) return existing;
 
@@ -36,7 +38,8 @@ async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, pa
   try {
     return await db.presetVersion.create({ data: { presetId, version, ...payload } });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    const maybe = error as { code?: string } | null;
+    if (maybe?.code === "P2002") {
       const found = await db.presetVersion.findUnique({ where: { presetId_contentHash: { presetId, contentHash: payload.contentHash } } });
       if (found) return found;
     }
@@ -49,8 +52,8 @@ export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise
     const stableKey = String(item.id);
     const preset = await db.preset.upsert({
       where: { stableKey },
-      update: { name: String(item.name), description: String(item.description) },
-      create: { stableKey, name: String(item.name), description: String(item.description), isArchived: false }
+      update: { name: String(item.name), description: String(item.description), bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null },
+      create: { stableKey, name: String(item.name), description: String(item.description), bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null, isArchived: false }
     });
 
     const defaultProvider = assertSupportedProvider(String(item.defaultProvider));
@@ -70,6 +73,7 @@ export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise
       defaultProvider,
       defaultModel: String(item.defaultModel),
       defaultParamsJson: JSON.stringify(item.defaultParams ?? {}),
+      samplePrompt: item.samplePrompt ? String(item.samplePrompt) : null,
       contentHash
     });
   }
@@ -77,7 +81,7 @@ export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise
 
 export async function getActivePresets(db: typeof prisma = prisma): Promise<DbPresetView[]> {
   const rows = await db.preset.findMany({ where: { isArchived: false }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { name: "asc" } });
-  return rows.filter((p) => p.versions[0]).map((p) => ({
+  return rows.filter((p: any) => p.versions[0]).map((p: any) => ({
     id: p.stableKey,
     stableKey: p.stableKey,
     name: p.name,
@@ -87,7 +91,10 @@ export async function getActivePresets(db: typeof prisma = prisma): Promise<DbPr
     stylePrompt: p.versions[0].stylePrompt,
     defaultProvider: p.versions[0].defaultProvider,
     defaultModel: p.versions[0].defaultModel,
-    defaultParams: JSON.parse(p.versions[0].defaultParamsJson)
+    defaultParams: JSON.parse(p.versions[0].defaultParamsJson),
+    bestUseLabel: p.bestUseLabel,
+    samplePrompt: p.versions[0].samplePrompt,
+    isArchived: p.isArchived
   }));
 }
 

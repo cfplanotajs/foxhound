@@ -86,7 +86,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
     orderBy: { createdAt: "asc" },
     include: { tasks: true }
   });
-  const queued = queuedCandidates.find((job) => hasActionableTask(job.tasks as Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt?: Date | null }>, now));
+  const queued = queuedCandidates.find((job: any) => hasActionableTask(job.tasks as Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt?: Date | null }>, now));
   if (!queued) return null;
 
   const claim = await prisma.generationJob.updateMany({

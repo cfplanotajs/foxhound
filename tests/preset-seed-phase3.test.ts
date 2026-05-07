@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Prisma } from "@prisma/client";
 import { hashPresetContent, upsertPresetVersionAtomic } from "../lib/presets.ts";
 
 test("identical preset content yields identical hash", () => {
@@ -23,7 +22,9 @@ test("duplicate-content race path (P2002) is safely handled", async () => {
       findFirst: async () => ({ version: "v1" }),
       create: async () => {
         db._seen = true;
-        throw new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "x" });
+        const err = new Error("dup") as Error & { code?: string };
+        err.code = "P2002";
+        throw err;
       }
     },
     _seen: false

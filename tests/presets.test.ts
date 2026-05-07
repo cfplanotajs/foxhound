@@ -12,6 +12,7 @@ test("presets include required fields and defaultParams", () => {
     assert.equal(preset.defaultProvider, "openai");
     assert.ok(preset.defaultModel);
     assert.ok(preset.defaultParams);
+    assert.equal(typeof preset.samplePrompt === "string" || preset.samplePrompt === undefined, true);
     assert.ok((preset.defaultParams as Record<string, unknown>).size);
     assert.ok((preset.defaultParams as Record<string, unknown>).quality);
   }

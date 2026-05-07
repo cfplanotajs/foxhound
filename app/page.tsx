@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown> };
+type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type TaskStatus = "queued" | "processing" | "completed" | "failed";
 type JobTask = {
   id: string;
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [showManager, setShowManager] = useState(false);
   const [managerName, setManagerName] = useState("");
   const [managerPrompt, setManagerPrompt] = useState("");
+  const [managerPresets, setManagerPresets] = useState<{active: Preset[]; archived: Preset[]}>({ active: [], archived: [] });
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -61,6 +62,10 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadPresets();
   }, [loadPresets]);
+  useEffect(() => {
+    if (!showManager) return;
+    void fetch("/api/presets/manage").then((r) => r.json()).then((d) => setManagerPresets({ active: d.active ?? [], archived: d.archived ?? [] }));
+  }, [showManager]);
 
   const promptValid = singlePrompt.trim().length > 0 || bulkPrompts.trim().length > 0;
   const formValid = Boolean(presetId && provider && model.trim() && promptValid);
@@ -119,14 +124,6 @@ export default function DashboardPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
-
-
-  const samplePrompts: Record<string, string> = {
-    kids_vector_card_illustration_v1: "A cheerful raccoon explorer holding a giant map, bold 2D cartoon card-game style, no text",
-    clean_sticker_character_white_bg_v1: "A cute fox wearing a tiny backpack, isolated on white background, clean die-cut sticker style",
-    storybook_habitat_background_concept_v1: "A warm educational kelp forest habitat background with sea otters, fish, and sunlight rays, not too busy",
-    amazon_photoreal_lifestyle_product_v1: "A bright realistic lifestyle photo of a child using an educational sticker book at a wooden table"
-  };
 
   async function createPresetFromManager() {
     const stableKey = managerName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -195,7 +192,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{Object.entries(samplePrompts).map(([presetKey, prompt]) => <button key={presetKey} type="button" className="rounded bg-slate-100 px-2 py-1 text-xs" onClick={() => { setPresetId(presetKey); setSinglePrompt(prompt); }}>{presetKey.split("_")[0]} sample</button>)}</div>
+          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{presets.map((p) => <button key={p.id} type="button" className="rounded bg-slate-100 px-2 py-1 text-xs" onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>{p.samplePrompt ? `${p.name} sample` : `Use ${p.name}`}</button>)}</div>
           {error ? <p className="mb-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{error}</p> : null}
           <label className="grid gap-1 text-sm"><span className="font-medium">Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-20 rounded border p-2" /></label>
           <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-24 rounded border p-2" /></label>
@@ -214,6 +211,11 @@ export default function DashboardPage() {
             <input value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Preset name" className="rounded border p-2" />
             <textarea value={managerPrompt} onChange={(e) => setManagerPrompt(e.target.value)} placeholder="Style prompt" className="rounded border p-2 min-h-20" />
             <button type="button" className="rounded bg-blue-600 px-3 py-2 text-white" onClick={createPresetFromManager}>Create Preset</button>
+          </div>
+          <div className="mt-4">
+            <h3 className="font-medium">Active Presets</h3>
+            <div className="mt-2 grid gap-2">{managerPresets.active.map((p) => <div key={p.id} className="rounded border p-2 text-sm flex items-center justify-between"><span>{p.name} ({p.version})</span><button className="rounded bg-slate-200 px-2 py-1" onClick={async ()=>{await fetch('/api/presets/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'archive',stableKey:p.id,isArchived:true})}); await loadPresets(); setShowManager(false); setShowManager(true);}}>Archive</button></div>)}</div>
+            <details className="mt-3"><summary className="cursor-pointer text-sm font-medium">Archived presets</summary><div className="mt-2 grid gap-2">{managerPresets.archived.map((p) => <div key={p.id} className="rounded border p-2 text-sm flex items-center justify-between"><span>{p.name} ({p.version})</span><button className="rounded bg-slate-200 px-2 py-1" onClick={async ()=>{await fetch('/api/presets/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'archive',stableKey:p.id,isArchived:false})}); await loadPresets(); setShowManager(false); setShowManager(true);}}>Unarchive</button></div>)}</div></details>
           </div>
         </section>
       ) : null}
