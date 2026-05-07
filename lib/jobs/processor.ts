@@ -13,10 +13,17 @@ const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
 const WORKER_STALLED_AFTER_MS = Number(process.env.WORKER_STALLED_AFTER_MS ?? "900000");
 
-async function failClaimedJobTasks(jobId: string, setupError: unknown, logger: Pick<Console, "info" | "error">): Promise<void> {
+function isActionableDuringSetupFailure(task: { status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }, now: Date): boolean {
+  if (task.status === "queued" || task.status === "processing") return true;
+  return task.status === "failed" && !!task.nextAttemptAt && task.nextAttemptAt <= now && task.attempts < task.maxAttempts;
+}
+
+export async function failClaimedJobTasks(jobId: string, setupError: unknown, logger: Pick<Console, "info" | "error">): Promise<void> {
   const normalized = normalizeProviderError(setupError);
-  const tasks = await prisma.generationTask.findMany({ where: { jobId, status: { in: ["queued", "processing"] } } });
+  const now = new Date();
+  const tasks = await prisma.generationTask.findMany({ where: { jobId } });
   for (const task of tasks) {
+    if (!isActionableDuringSetupFailure(task as any, now)) continue;
     const attempts = task.attempts + 1;
     await prisma.generationTask.update({
       where: { id: task.id },
@@ -31,7 +38,9 @@ async function failClaimedJobTasks(jobId: string, setupError: unknown, logger: P
       }
     });
   }
-  await prisma.generationJob.update({ where: { id: jobId }, data: { status: "failed", completedAt: new Date() } });
+  const refreshed = await prisma.generationTask.findMany({ where: { jobId } });
+  const status = reconcileJobStatusFromTasks(refreshed as any);
+  await prisma.generationJob.update({ where: { id: jobId }, data: { status, ...(status !== "queued" ? { completedAt: new Date() } : {}) } });
   logger.error(`[worker] job failed during provider setup ${jobId} kind=${normalized.kind}`);
 }
 

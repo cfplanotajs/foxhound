@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const [model, setModel] = useState("gpt-image-2");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const [variationCount, setVariationCount] = useState(1);
+  const [quality, setQuality] = useState("high");
   const [jobId, setJobId] = useState("");
   const [jobStatus, setJobStatus] = useState("");
   const [tasks, setTasks] = useState<JobTask[]>([]);
@@ -100,7 +101,7 @@ export default function DashboardPage() {
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey, aspectRatio, variationCount })
+      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey, aspectRatio, variationCount, quality })
     });
     const data = await res.json();
     if (res.ok) {
@@ -217,9 +218,10 @@ export default function DashboardPage() {
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="mock">Demo Mode (Mock)</option><option value="openai">OpenAI</option></select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Model</span><input value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2" /></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Model</span>{provider === "mock" ? <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="mock-v1">mock-v1</option></select> : <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="gpt-image-2">gpt-image-2</option><option value="gpt-image-1">gpt-image-1</option><option value="dall-e-3">dall-e-3</option><option value="dall-e-2">dall-e-2</option></select>}</label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="rounded border p-2">{model === "dall-e-3" ? <><option value="standard">standard</option><option value="hd">hd</option></> : model === "dall-e-2" ? <option value="standard">standard</option> : <><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="auto">auto</option></>}</select></label>
           </div>
         </div>
 

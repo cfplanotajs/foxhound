@@ -38,3 +38,8 @@ test("variation count accepts 1,2,4 and rejects others", () => {
   assert.equal(createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 4 }).variationCount, 4);
   assert.throws(() => createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 3 }));
 });
+
+test("quality accepts known values and rejects unknown", () => {
+  assert.equal(createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", quality: "high" }).quality, "high");
+  assert.throws(() => createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", quality: "ultra" }));
+});

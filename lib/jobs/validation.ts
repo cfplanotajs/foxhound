@@ -19,6 +19,7 @@ export const createJobSchema = z.object({
   idempotencyKey: z.preprocess(emptyToUndefined, z.string().min(8).max(128).optional())
   ,aspectRatio: z.preprocess(emptyToUndefined, z.string().optional())
   ,variationCount: z.number().int().refine((n) => [1, 2, 4].includes(n), "Variation count must be 1, 2, or 4.").optional()
+  ,quality: z.preprocess(emptyToUndefined, z.enum(["low", "medium", "high", "auto", "standard", "hd"]).optional())
 });
 
 export type CreateJobInput = z.infer<typeof createJobSchema>;

@@ -11,7 +11,7 @@ import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
 import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
-import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
+import { assertSupportedOpenAIModel, listSupportedOpenAIModels } from "@/lib/providers/openai-models";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 import { resolveSizeForModel } from "@/lib/providers/image-size-presets";
 
@@ -42,7 +42,10 @@ export async function POST(request: Request) {
     });
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
-    if (provider === "openai") assertSupportedOpenAIModel(model);
+    const openaiSpec = provider === "openai" ? assertSupportedOpenAIModel(model) : null;
+    if (openaiSpec && body.quality && !openaiSpec.allowedQualities.includes(body.quality as any)) {
+      return NextResponse.json({ error: `Selected quality is not supported for model ${model}.` }, { status: 400 });
+    }
     ensureJobProviderConfigured(provider);
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
@@ -80,8 +83,8 @@ export async function POST(request: Request) {
             defaultModelSnapshot: preset.defaultModel,
             defaultParamsJsonSnapshot: JSON.stringify(preset.defaultParams),
             requestPayloadJson: serializeTaskPayload(
-              { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: resolvedSize },
-              { model, size: resolvedSize, variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1" }
+              { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: resolvedSize, ...(body.quality ? { quality: body.quality as any } : {}) },
+              { model, size: resolvedSize, quality: body.quality ?? null, supportedModels: provider === "openai" ? listSupportedOpenAIModels() : ["mock-v1"], variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1" }
             ),
             presetVersionId: preset.versionId
           }))
