@@ -1,26 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
-import { assertSupportedProvider } from "@/lib/providers/supported";
 import { hashPresetContent } from "@/lib/presets";
-
-function required(value: unknown, message: string): string {
-  const v = String(value ?? "").trim();
-  if (!v) throw new Error(message);
-  return v;
-}
-function parseDefaultParams(value: unknown): Record<string, unknown> {
-  if (value == null) return {};
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value) as Record<string, unknown>;
-    } catch {
-      throw new Error("Default params must be valid JSON.");
-    }
-  }
-  if (typeof value === "object") return value as Record<string, unknown>;
-  throw new Error("Default params must be valid JSON.");
-}
+import { normalizePresetProviderModel, parseDefaultParams, requiredText } from "@/lib/presets/manage-validation";
 
 export async function GET() {
   const rows = await prisma.preset.findMany({ include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } });
@@ -46,14 +27,10 @@ export async function POST(request: Request) {
     const action = body?.action as string;
 
     if (action === "create") {
-      const provider = assertSupportedProvider(required(body.defaultProvider, "Default provider is required."));
-      const name = required(body.name, "Preset name is required.");
-      const stylePrompt = required(body.stylePrompt, "Style prompt is required.");
-      const defaultModel = required(body.defaultModel, "Default model is required.");
+      const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
+      const name = requiredText(body.name, "Preset name is required.");
+      const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
       const defaultParams = parseDefaultParams(body.defaultParams);
-      if (provider === "openai" && !isSupportedOpenAIModel(defaultModel)) {
-        return NextResponse.json({ error: `Unsupported OpenAI image model: ${defaultModel}` }, { status: 400 });
-      }
       const preset = await prisma.preset.create({
         data: {
           stableKey: body.stableKey,
@@ -80,14 +57,10 @@ export async function POST(request: Request) {
     if (action === "edit") {
       const preset = await prisma.preset.findUnique({ where: { stableKey: body.stableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
       if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 404 });
-      const provider = assertSupportedProvider(required(body.defaultProvider, "Default provider is required."));
-      const name = required(body.name, "Preset name is required.");
-      const stylePrompt = required(body.stylePrompt, "Style prompt is required.");
-      const defaultModel = required(body.defaultModel, "Default model is required.");
+      const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
+      const name = requiredText(body.name, "Preset name is required.");
+      const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
       const defaultParams = parseDefaultParams(body.defaultParams);
-      if (provider === "openai" && !isSupportedOpenAIModel(defaultModel)) {
-        return NextResponse.json({ error: `Unsupported OpenAI image model: ${defaultModel}` }, { status: 400 });
-      }
       const contentHash = body.contentHash ?? hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
@@ -150,6 +123,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith("Unsupported provider:")) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+    if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && /(required|valid JSON)/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
