@@ -114,7 +114,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "archive") {
-      await prisma.preset.update({ where: { stableKey: body.stableKey }, data: { isArchived: !!body.isArchived } });
+      const stableKey = requiredText(body.stableKey, "Preset stableKey is required.");
+      await prisma.preset.update({ where: { stableKey }, data: { isArchived: !!body.isArchived } });
       return NextResponse.json({ ok: true });
     }
 

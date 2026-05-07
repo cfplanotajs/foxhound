@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
+type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
 type TaskStatus = "queued" | "processing" | "completed" | "failed";
 type JobTask = {
   id: string;
@@ -44,7 +45,9 @@ export default function DashboardPage() {
   const [showManager, setShowManager] = useState(false);
   const [managerName, setManagerName] = useState("");
   const [managerPrompt, setManagerPrompt] = useState("");
-  const [managerPresets, setManagerPresets] = useState<{active: Preset[]; archived: Preset[]}>({ active: [], archived: [] });
+  const [managerPresets, setManagerPresets] = useState<{active: ManagerPreset[]; archived: ManagerPreset[]}>({ active: [], archived: [] });
+  const [managerLoading, setManagerLoading] = useState(false);
+  const [managerError, setManagerError] = useState("");
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -62,10 +65,19 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadPresets();
   }, [loadPresets]);
+  const reloadManagerPresets = useCallback(async () => {
+    setManagerLoading(true);
+    setManagerError("");
+    const r = await fetch("/api/presets/manage");
+    const d = await r.json();
+    if (!r.ok) setManagerError(d.error ?? "Could not load preset manager.");
+    else setManagerPresets({ active: d.active ?? [], archived: d.archived ?? [] });
+    setManagerLoading(false);
+  }, []);
   useEffect(() => {
     if (!showManager) return;
-    void fetch("/api/presets/manage").then((r) => r.json()).then((d) => setManagerPresets({ active: d.active ?? [], archived: d.archived ?? [] }));
-  }, [showManager]);
+    void reloadManagerPresets();
+  }, [showManager, reloadManagerPresets]);
 
   const promptValid = singlePrompt.trim().length > 0 || bulkPrompts.trim().length > 0;
   const formValid = Boolean(presetId && provider && model.trim() && promptValid);
@@ -150,6 +162,18 @@ export default function DashboardPage() {
     await loadPresets();
   }
 
+  async function setPresetArchived(stableKey: string, isArchived: boolean) {
+    const res = await fetch("/api/presets/manage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "archive", stableKey, isArchived }) });
+    const data = await res.json();
+    if (!res.ok) {
+      setManagerError(isArchived ? "Could not archive preset." : "Could not unarchive preset.");
+      return;
+    }
+    await Promise.all([loadPresets(), reloadManagerPresets()]);
+    if (isArchived && presetId === stableKey) setPresetId("");
+    if (data?.error) setManagerError(data.error);
+  }
+
   const counts = {
     complete: tasks.filter((t) => t.status === "completed").length,
     failed: tasks.filter((t) => t.status === "failed").length,
@@ -212,10 +236,13 @@ export default function DashboardPage() {
             <textarea value={managerPrompt} onChange={(e) => setManagerPrompt(e.target.value)} placeholder="Style prompt" className="rounded border p-2 min-h-20" />
             <button type="button" className="rounded bg-blue-600 px-3 py-2 text-white" onClick={createPresetFromManager}>Create Preset</button>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
+            {managerError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{managerError}</p> : null}
             <h3 className="font-medium">Active Presets</h3>
-            <div className="mt-2 grid gap-2">{managerPresets.active.map((p) => <div key={p.id} className="rounded border p-2 text-sm flex items-center justify-between"><span>{p.name} ({p.version})</span><button className="rounded bg-slate-200 px-2 py-1" onClick={async ()=>{await fetch('/api/presets/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'archive',stableKey:p.id,isArchived:true})}); await loadPresets(); setShowManager(false); setShowManager(true);}}>Archive</button></div>)}</div>
-            <details className="mt-3"><summary className="cursor-pointer text-sm font-medium">Archived presets</summary><div className="mt-2 grid gap-2">{managerPresets.archived.map((p) => <div key={p.id} className="rounded border p-2 text-sm flex items-center justify-between"><span>{p.name} ({p.version})</span><button className="rounded bg-slate-200 px-2 py-1" onClick={async ()=>{await fetch('/api/presets/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'archive',stableKey:p.id,isArchived:false})}); await loadPresets(); setShowManager(false); setShowManager(true);}}>Unarchive</button></div>)}</div></details>
+            {managerLoading ? <p className="text-sm text-slate-500">Loading presets...</p> : null}
+            {!managerLoading && managerPresets.active.length === 0 ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">No active presets.</p> : null}
+            <div className="mt-2 grid gap-2">{managerPresets.active.map((p) => <div key={p.stableKey} className="rounded-xl border p-3 text-sm flex items-center justify-between"><span>{p.name} <span className="text-slate-500">({p.version})</span></span><button className="rounded bg-amber-100 px-3 py-1 font-medium text-amber-800 hover:bg-amber-200" onClick={() => setPresetArchived(p.stableKey, true)}>Archive</button></div>)}</div>
+            <details className="mt-3"><summary className="cursor-pointer text-sm font-medium">Archived presets</summary>{!managerLoading && managerPresets.archived.length === 0 ? <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">No archived presets.</p> : null}<div className="mt-2 grid gap-2">{managerPresets.archived.map((p) => <div key={p.stableKey} className="rounded-xl border p-3 text-sm flex items-center justify-between"><span>{p.name} <span className="text-slate-500">({p.version})</span></span><button className="rounded bg-emerald-100 px-3 py-1 font-medium text-emerald-800 hover:bg-emerald-200" onClick={() => setPresetArchived(p.stableKey, false)}>Unarchive</button></div>)}</div></details>
           </div>
         </section>
       ) : null}
