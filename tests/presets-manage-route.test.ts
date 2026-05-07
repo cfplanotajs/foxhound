@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { GET, POST } from "../app/api/presets/manage/route.ts";
 import { prisma } from "../lib/db.ts";
+import { hashPresetContent } from "../lib/presets.ts";
 
 test("manage GET returns stableKey for active and archived lists", async () => {
   const orig = prisma.preset.findMany;
@@ -29,4 +30,41 @@ test("archive action requires stableKey and updates archive flag", async () => {
   assert.equal(good.status, 200);
   assert.equal(received.where.stableKey, "abc");
   (prisma.preset as any).update = orig;
+});
+
+test("edit ignores client contentHash and does not create duplicate version for unchanged content", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origUpdate = prisma.preset.update;
+  let updated = false;
+  (prisma.preset as any).findUnique = async () => ({
+    id: "p1",
+    stableKey: "k1",
+    versions: [{ version: "v1", contentHash: hashPresetContent({ stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {}, samplePrompt: null }) }]
+  });
+  (prisma.preset as any).update = async () => {
+    updated = true;
+    return {};
+  };
+  const res = await POST(
+    new Request("http://x", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "edit",
+        stableKey: "k1",
+        name: "Preset",
+        stylePrompt: "Style",
+        defaultProvider: "openai",
+        defaultModel: "gpt-image-2",
+        defaultParams: {},
+        samplePrompt: null,
+        contentHash: "bogus-client-hash"
+      })
+    })
+  );
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.noChange, true);
+  assert.equal(updated, false);
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).update = origUpdate;
 });

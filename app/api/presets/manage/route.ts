@@ -46,7 +46,7 @@ export async function POST(request: Request) {
               defaultModel,
               defaultParamsJson: JSON.stringify(defaultParams),
               samplePrompt: body.samplePrompt ?? null,
-              contentHash: body.contentHash ?? hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams })
+              contentHash: hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null })
             }
           }
         }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       const name = requiredText(body.name, "Preset name is required.");
       const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
       const defaultParams = parseDefaultParams(body.defaultParams);
-      const contentHash = body.contentHash ?? hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams });
+      const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
       const next = `v${((latest && Number(latest.version.replace(/^v/, ""))) || 0) + 1}`;

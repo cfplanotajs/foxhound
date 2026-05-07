@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getWorkerMaxAttempts, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
+import { getWorkerMaxAttempts, getWorkerRetryBaseMs, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
 
 test("missing value falls back to default", () => {
   assert.equal(parsePositiveIntEnv(undefined, 3), 3);
@@ -30,4 +30,17 @@ test("getWorkerMaxAttempts uses sanitized env", () => {
   process.env.WORKER_MAX_ATTEMPTS = "7";
   assert.equal(getWorkerMaxAttempts(), 7);
   process.env.WORKER_MAX_ATTEMPTS = old;
+});
+
+test("getWorkerRetryBaseMs sanitizes malformed values", () => {
+  const old = process.env.WORKER_RETRY_BASE_MS;
+  process.env.WORKER_RETRY_BASE_MS = "5s";
+  assert.equal(getWorkerRetryBaseMs(), 5000);
+  process.env.WORKER_RETRY_BASE_MS = " ";
+  assert.equal(getWorkerRetryBaseMs(), 5000);
+  process.env.WORKER_RETRY_BASE_MS = "-10";
+  assert.equal(getWorkerRetryBaseMs(), 1000);
+  process.env.WORKER_RETRY_BASE_MS = "9999999";
+  assert.equal(getWorkerRetryBaseMs(), 300000);
+  process.env.WORKER_RETRY_BASE_MS = old;
 });

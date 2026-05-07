@@ -7,10 +7,10 @@ import { buildProviderRequest, extractTaskParams, serializeTaskPayload } from "@
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 import { hasActionableTask, shouldRequeueAfterPass } from "@/lib/jobs/actionable";
 import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
-import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
+import { getWorkerMaxAttempts, getWorkerRetryBaseMs } from "@/lib/jobs/worker-config";
 
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
-const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
+const WORKER_RETRY_BASE_MS = getWorkerRetryBaseMs();
 const WORKER_STALLED_AFTER_MS = Number(process.env.WORKER_STALLED_AFTER_MS ?? "900000");
 
 function isActionableDuringSetupFailure(task: { status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }, now: Date): boolean {

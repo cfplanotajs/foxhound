@@ -11,3 +11,7 @@ export function parsePositiveIntEnv(value: string | undefined, fallback: number,
 export function getWorkerMaxAttempts(): number {
   return parsePositiveIntEnv(process.env.WORKER_MAX_ATTEMPTS, 3, 1, 25);
 }
+
+export function getWorkerRetryBaseMs(): number {
+  return parsePositiveIntEnv(process.env.WORKER_RETRY_BASE_MS, 5000, 1000, 300000);
+}

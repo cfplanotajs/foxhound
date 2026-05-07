@@ -20,7 +20,7 @@ export type DbPresetView = {
   isArchived: boolean;
 };
 
-function hashPresetContent(input: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParams: Record<string, unknown> }) {
+function hashPresetContent(input: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParams: Record<string, unknown>; samplePrompt?: string | null }) {
   return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
@@ -65,7 +65,8 @@ export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise
       stylePrompt: String(item.stylePrompt),
       defaultProvider,
       defaultModel: String(item.defaultModel),
-      defaultParams: (item.defaultParams ?? {}) as Record<string, unknown>
+      defaultParams: (item.defaultParams ?? {}) as Record<string, unknown>,
+      samplePrompt: item.samplePrompt ? String(item.samplePrompt) : null
     });
 
     await upsertPresetVersionAtomic(db, preset.id, {
