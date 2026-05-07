@@ -22,7 +22,9 @@ type JobTask = {
   variationCount?: number | null;
   aspectRatio?: string | null;
   size?: string | null;
+  reviewStatus?: "unreviewed" | "favorite" | "approved" | "rejected";
 };
+type RecentJob = { id: string; status: string; provider: string; model: string; createdAt: string; presetName: string | null; presetVersion: string | null; counts: { completed: number; failed: number; queued: number; processing: number } };
 
 function statusChip(status: string) {
   const map: Record<string, string> = {
@@ -56,6 +58,8 @@ export default function DashboardPage() {
   const [managerPresets, setManagerPresets] = useState<{active: ManagerPreset[]; archived: ManagerPreset[]}>({ active: [], archived: [] });
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState("");
+  const [recentJobs, setRecentJobs] = useState<RecentJob[]>([]);
+  const [toast, setToast] = useState("");
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -72,6 +76,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadPresets();
+    void fetch("/api/jobs/recent").then((r) => r.json()).then((d) => setRecentJobs(d.jobs ?? []));
   }, [loadPresets]);
   const reloadManagerPresets = useCallback(async () => {
     setManagerLoading(true);
@@ -130,6 +135,11 @@ export default function DashboardPage() {
     const res = await fetch(`/api/jobs/${targetJobId}/images`);
     const data = await res.json();
     setTasks(data.tasks ?? []);
+  }
+  async function updateReview(taskId: string, reviewStatus: "unreviewed" | "favorite" | "approved" | "rejected") {
+    const res = await fetch(`/api/tasks/${taskId}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewStatus }) });
+    if (!res.ok) return;
+    await refreshImages();
   }
 
   async function downloadZip() {
@@ -294,6 +304,13 @@ export default function DashboardPage() {
                   <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
                   {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
                   {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
+                  <p className="text-xs text-slate-600">Review: {task.reviewStatus ?? "unreviewed"}</p>
+                  <div className="mt-2 flex gap-1 text-xs">
+                    <button className="rounded bg-yellow-100 px-2 py-1" onClick={() => updateReview(task.id, "favorite")}>Favorite</button>
+                    <button className="rounded bg-emerald-100 px-2 py-1" onClick={() => updateReview(task.id, "approved")}>Approve</button>
+                    <button className="rounded bg-rose-100 px-2 py-1" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
+                    <button className="rounded bg-slate-100 px-2 py-1" onClick={() => updateReview(task.id, "unreviewed")}>Clear</button>
+                  </div>
 
                   {task.status === "failed" ? (
                     <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
@@ -311,6 +328,25 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold">Recent Jobs</h2>
+        {toast ? <p className="mt-2 text-sm text-emerald-700">{toast}</p> : null}
+        <div className="mt-3 grid gap-2">
+          {recentJobs.map((j) => (
+            <div key={j.id} className="rounded border p-2 text-sm flex items-center justify-between">
+              <div>
+                <p className="font-medium">{j.id.slice(0, 8)} · {j.status}</p>
+                <p className="text-slate-600">{j.presetName ?? "Unknown preset"} {j.presetVersion ? `(${j.presetVersion})` : ""} · {j.provider}/{j.model}</p>
+              </div>
+              <div className="flex gap-2">
+                <button className="rounded bg-slate-200 px-2 py-1" onClick={async () => { setJobId(j.id); await refreshJob(j.id); await refreshImages(j.id); }}>Open</button>
+                <button className="rounded bg-slate-200 px-2 py-1" onClick={async () => { setSinglePrompt(tasks.map((t) => t.subjectPrompt).join("\n")); setProvider(j.provider); setModel(j.model); setToast("Job copied into the form. Adjust and submit when ready."); }}>Duplicate</button>
+                <button className="rounded bg-blue-600 px-2 py-1 text-white" onClick={async () => { await submitJob(); setToast("Re-run submitted as a new job."); }}>Re-run</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

@@ -14,6 +14,7 @@ export interface TaskForClient {
   createdAt: Date;
   completedAt: Date | null;
   outputPath: string | null;
+  reviewStatus?: string | null;
 }
 
 export function toClientTaskDto(task: TaskForClient) {
@@ -46,6 +47,7 @@ export function toClientTaskDto(task: TaskForClient) {
     provider: task.provider,
     model: task.model,
     errorMessage: task.errorMessage,
+    reviewStatus: task.reviewStatus ?? "unreviewed",
     variationIndex: taskMeta?.variationIndex ?? null,
     variationCount: taskMeta?.variationCount ?? null,
     aspectRatio: taskMeta?.aspectRatio ?? null,

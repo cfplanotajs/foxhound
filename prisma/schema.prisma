@@ -22,6 +22,13 @@ enum TaskStatus {
   failed
 }
 
+enum ReviewStatus {
+  unreviewed
+  favorite
+  approved
+  rejected
+}
+
 model Preset {
   id          String          @id @default(cuid())
   stableKey   String          @unique
@@ -93,4 +100,6 @@ model GenerationTask {
   createdAt            DateTime      @default(now())
   startedAt            DateTime?
   completedAt          DateTime?
+  reviewStatus         ReviewStatus  @default(unreviewed)
+  reviewedAt           DateTime?
 }
