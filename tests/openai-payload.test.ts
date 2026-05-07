@@ -16,9 +16,9 @@ test("dall-e-3 quality normalizes to standard/hd only", () => {
   assert.equal(hd.n, 1);
 });
 
-test("dall-e-2 payload omits invalid high quality", () => {
+test("dall-e-2 payload normalizes to standard quality", () => {
   const payload = buildOpenAIImagePayload({ provider: "openai", model: "dall-e-2", prompt: "cat", count: 2, size: "1024x1024", quality: "high" });
-  assert.equal("quality" in payload, false);
+  assert.equal(payload.quality, "standard");
   assert.equal(payload.response_format, "b64_json");
   assert.equal(payload.n, 1);
 });

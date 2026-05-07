@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -85,6 +86,9 @@ export default function DashboardPage() {
     if (!showManager) return;
     void reloadManagerPresets();
   }, [showManager, reloadManagerPresets]);
+  useEffect(() => {
+    setQuality((current) => normalizeQualityForModel(provider as "openai" | "mock", model, current));
+  }, [provider, model]);
 
   const promptValid = singlePrompt.trim().length > 0 || bulkPrompts.trim().length > 0;
   const formValid = Boolean(presetId && provider && model.trim() && promptValid);
@@ -221,7 +225,7 @@ export default function DashboardPage() {
             <label className="grid gap-1 text-sm"><span className="font-medium">Model</span>{provider === "mock" ? <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="mock-v1">mock-v1</option></select> : <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="gpt-image-2">gpt-image-2</option><option value="gpt-image-1">gpt-image-1</option><option value="dall-e-3">dall-e-3</option><option value="dall-e-2">dall-e-2</option></select>}</label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="rounded border p-2">{model === "dall-e-3" ? <><option value="standard">standard</option><option value="hd">hd</option></> : model === "dall-e-2" ? <option value="standard">standard</option> : <><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="auto">auto</option></>}</select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="rounded border p-2">{getQualityOptionsForModel(provider as "openai" | "mock", model).map((q) => <option key={q} value={q}>{q}</option>)}</select></label>
           </div>
         </div>
 

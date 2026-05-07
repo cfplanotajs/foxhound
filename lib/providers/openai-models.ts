@@ -41,7 +41,7 @@ const MODEL_SPECS: Record<string, OpenAIModelSpec> = {
   "dall-e-2": {
     id: "dall-e-2",
     family: "dall-e-2",
-    allowedQualities: [],
+    allowedQualities: ["standard"],
     allowedSizes: ["256x256", "512x512", "1024x1024"],
     supportsResponseFormat: true,
     allowsMultiImage: false,

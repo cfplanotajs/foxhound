@@ -35,6 +35,7 @@ export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payloa
     model: spec.id,
     prompt: request.prompt,
     size: safeSize,
+    quality: "standard",
     response_format: "b64_json",
     n: safeCount
   };
