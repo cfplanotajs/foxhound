@@ -13,6 +13,7 @@ import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
 import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
+import { resolveSizeForModel } from "@/lib/providers/image-size-presets";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
@@ -50,11 +51,18 @@ export async function POST(request: Request) {
     if (subjectPrompts.length === 0) return NextResponse.json({ error: "Enter at least one prompt." }, { status: 400 });
     if (subjectPrompts.length > MAX_PROMPT_LINES) return NextResponse.json({ error: "Too many prompt lines" }, { status: 400 });
 
+    const variationCount = body.variationCount ?? 1;
+    const resolvedSize = resolveSizeForModel(model, body.aspectRatio ?? "1:1");
+    if (!resolvedSize) return NextResponse.json({ error: "Selected aspect ratio is not supported for this model." }, { status: 400 });
+
     let job;
     try {
+      const taskPayloads = subjectPrompts.flatMap((subjectPrompt) =>
+        Array.from({ length: variationCount }, (_, index) => ({ subjectPrompt, variationIndex: index + 1 }))
+      );
       job = await createJobAndTasksAtomic(prisma as never, {
         jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey },
-        taskData: subjectPrompts.map((subjectPrompt) => ({
+        taskData: taskPayloads.map(({ subjectPrompt, variationIndex }) => ({
             presetId: preset.stableKey,
             presetName: preset.name,
             presetVersion: preset.version,
@@ -71,7 +79,10 @@ export async function POST(request: Request) {
             defaultProviderSnapshot: preset.defaultProvider,
             defaultModelSnapshot: preset.defaultModel,
             defaultParamsJsonSnapshot: JSON.stringify(preset.defaultParams),
-            requestPayloadJson: serializeTaskPayload(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }, { model }),
+            requestPayloadJson: serializeTaskPayload(
+              { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: resolvedSize },
+              { model, size: resolvedSize, variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1" }
+            ),
             presetVersionId: preset.versionId
           }))
       });

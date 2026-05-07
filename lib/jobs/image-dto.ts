@@ -9,6 +9,7 @@ export interface TaskForClient {
   provider: string;
   model: string;
   errorMessage: string | null;
+  requestPayloadJson?: string | null;
   responseMetadataJson: string | null;
   createdAt: Date;
   completedAt: Date | null;
@@ -17,11 +18,20 @@ export interface TaskForClient {
 
 export function toClientTaskDto(task: TaskForClient) {
   let providerError: unknown = null;
+  let taskMeta: any = null;
   if (task.responseMetadataJson) {
     try {
       providerError = JSON.parse(task.responseMetadataJson)?.providerError ?? null;
     } catch {
       providerError = null;
+    }
+  }
+  if (task.requestPayloadJson) {
+    try {
+      const parsed = JSON.parse(task.requestPayloadJson);
+      taskMeta = parsed?.providerPayload ?? null;
+    } catch {
+      taskMeta = null;
     }
   }
 
@@ -36,6 +46,10 @@ export function toClientTaskDto(task: TaskForClient) {
     provider: task.provider,
     model: task.model,
     errorMessage: task.errorMessage,
+    variationIndex: taskMeta?.variationIndex ?? null,
+    variationCount: taskMeta?.variationCount ?? null,
+    aspectRatio: taskMeta?.aspectRatio ?? null,
+    size: taskMeta?.size ?? null,
     providerError,
     createdAt: task.createdAt,
     completedAt: task.completedAt,

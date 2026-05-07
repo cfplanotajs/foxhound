@@ -17,6 +17,8 @@ export const createJobSchema = z.object({
   singlePrompt: z.preprocess(emptyToUndefined, z.string().max(MAX_TEXT_LEN).optional()),
   bulkPrompts: z.preprocess(emptyToUndefined, z.string().max(MAX_TEXT_LEN * MAX_PROMPT_LINES).optional()),
   idempotencyKey: z.preprocess(emptyToUndefined, z.string().min(8).max(128).optional())
+  ,aspectRatio: z.preprocess(emptyToUndefined, z.string().optional())
+  ,variationCount: z.number().int().refine((n) => [1, 2, 4].includes(n), "Variation count must be 1, 2, or 4.").optional()
 });
 
 export type CreateJobInput = z.infer<typeof createJobSchema>;

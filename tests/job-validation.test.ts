@@ -31,3 +31,10 @@ test("valid single prompt request passes validation", () => {
   assert.equal(out.presetId, "p1");
   assert.equal(out.model, "gpt-image-2");
 });
+
+test("variation count accepts 1,2,4 and rejects others", () => {
+  assert.equal(createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 1 }).variationCount, 1);
+  assert.equal(createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 2 }).variationCount, 2);
+  assert.equal(createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 4 }).variationCount, 4);
+  assert.throws(() => createJobSchema.parse({ presetId: "p1", singlePrompt: "cat", variationCount: 3 }));
+});

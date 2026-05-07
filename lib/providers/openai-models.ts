@@ -15,7 +15,7 @@ const MODEL_SPECS: Record<string, OpenAIModelSpec> = {
     id: "gpt-image-2",
     family: "gpt-image",
     allowedQualities: ["low", "medium", "high", "auto"],
-    allowedSizes: ["1024x1024", "1536x1024", "1024x1536"],
+    allowedSizes: ["1024x1024", "1536x1024", "1024x1536", "1536x1152", "1152x2048", "1536x864"],
     supportsResponseFormat: false,
     allowsMultiImage: false,
     clampCountToOne: true
@@ -24,7 +24,7 @@ const MODEL_SPECS: Record<string, OpenAIModelSpec> = {
     id: "gpt-image-1",
     family: "gpt-image",
     allowedQualities: ["low", "medium", "high", "auto"],
-    allowedSizes: ["1024x1024", "1536x1024", "1024x1536"],
+    allowedSizes: ["1024x1024", "1536x1024", "1024x1536", "1536x1152", "1152x2048", "1536x864"],
     supportsResponseFormat: false,
     allowsMultiImage: false,
     clampCountToOne: true

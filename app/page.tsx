@@ -17,6 +17,10 @@ type JobTask = {
   model: string;
   providerError?: { title?: string; designerMessage?: string; technicalMessage?: string; suggestedAction?: string } | null;
   imageUrl: string | null;
+  variationIndex?: number | null;
+  variationCount?: number | null;
+  aspectRatio?: string | null;
+  size?: string | null;
 };
 
 function statusChip(status: string) {
@@ -37,6 +41,8 @@ export default function DashboardPage() {
   const [constraints, setConstraints] = useState("");
   const [provider, setProvider] = useState("openai");
   const [model, setModel] = useState("gpt-image-2");
+  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [variationCount, setVariationCount] = useState(1);
   const [jobId, setJobId] = useState("");
   const [jobStatus, setJobStatus] = useState("");
   const [tasks, setTasks] = useState<JobTask[]>([]);
@@ -94,7 +100,7 @@ export default function DashboardPage() {
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey })
+      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey, aspectRatio, variationCount })
     });
     const data = await res.json();
     if (res.ok) {
@@ -212,6 +218,8 @@ export default function DashboardPage() {
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-sm"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="mock">Demo Mode (Mock)</option><option value="openai">OpenAI</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Model</span><input value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2" /></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
           </div>
         </div>
 
@@ -278,6 +286,8 @@ export default function DashboardPage() {
                   <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
                   <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
                   <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
+                  {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
+                  {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
 
                   {task.status === "failed" ? (
                     <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
