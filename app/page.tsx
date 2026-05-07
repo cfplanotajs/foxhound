@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const [managerError, setManagerError] = useState("");
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([]);
   const [toast, setToast] = useState("");
+  const [rowLoadingId, setRowLoadingId] = useState<string | null>(null);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -140,6 +141,52 @@ export default function DashboardPage() {
     const res = await fetch(`/api/tasks/${taskId}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewStatus }) });
     if (!res.ok) return;
     await refreshImages();
+  }
+  async function duplicateJobIntoForm(targetJobId: string) {
+    setRowLoadingId(targetJobId);
+    const [jobRes, imgRes] = await Promise.all([fetch(`/api/jobs/${targetJobId}`), fetch(`/api/jobs/${targetJobId}/images`)]);
+    const jobData = await jobRes.json();
+    const imgData = await imgRes.json();
+    if (!jobRes.ok || !imgRes.ok) {
+      setToast("Could not copy job into form.");
+      setRowLoadingId(null);
+      return;
+    }
+    const sourceTasks: JobTask[] = imgData.tasks ?? [];
+    setSinglePrompt(sourceTasks.map((t) => t.subjectPrompt).join("\n"));
+    setProvider(jobData.job.provider);
+    setModel(jobData.job.model);
+    if (sourceTasks[0]?.aspectRatio) setAspectRatio(sourceTasks[0].aspectRatio);
+    if (sourceTasks[0]?.variationCount) setVariationCount(sourceTasks[0].variationCount);
+    if (sourceTasks[0]?.size && sourceTasks[0]?.aspectRatio == null) setAspectRatio("1:1");
+    if (sourceTasks[0] && sourceTasks[0].size) {
+      const payload = (sourceTasks[0] as any);
+      if (payload.quality) setQuality(payload.quality);
+    }
+    const sourcePreset = sourceTasks[0]?.presetName;
+    if (sourcePreset && !presets.find((p) => p.name === sourcePreset)) {
+      setToast("Job copied into the form, but source preset is unavailable. Choose an active preset.");
+    } else {
+      setToast("Job copied into the form. Adjust and submit when ready.");
+    }
+    setRowLoadingId(null);
+  }
+
+  async function rerunJobFromRow(targetJobId: string) {
+    setRowLoadingId(targetJobId);
+    const res = await fetch(`/api/jobs/${targetJobId}/rerun`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      setToast(data.error ?? "Could not re-run this job.");
+      setRowLoadingId(null);
+      return;
+    }
+    setJobId(data.jobId);
+    await refreshJob(data.jobId);
+    await refreshImages(data.jobId);
+    setToast("Re-run submitted as a new job.");
+    void fetch("/api/jobs/recent").then((r) => r.json()).then((d) => setRecentJobs(d.jobs ?? []));
+    setRowLoadingId(null);
   }
 
   async function downloadZip() {
@@ -340,8 +387,8 @@ export default function DashboardPage() {
               </div>
               <div className="flex gap-2">
                 <button className="rounded bg-slate-200 px-2 py-1" onClick={async () => { setJobId(j.id); await refreshJob(j.id); await refreshImages(j.id); }}>Open</button>
-                <button className="rounded bg-slate-200 px-2 py-1" onClick={async () => { setSinglePrompt(tasks.map((t) => t.subjectPrompt).join("\n")); setProvider(j.provider); setModel(j.model); setToast("Job copied into the form. Adjust and submit when ready."); }}>Duplicate</button>
-                <button className="rounded bg-blue-600 px-2 py-1 text-white" onClick={async () => { await submitJob(); setToast("Re-run submitted as a new job."); }}>Re-run</button>
+                <button className="rounded bg-slate-200 px-2 py-1" disabled={rowLoadingId === j.id} onClick={() => duplicateJobIntoForm(j.id)}>{rowLoadingId === j.id ? "Loading..." : "Duplicate"}</button>
+                <button className="rounded bg-blue-600 px-2 py-1 text-white" disabled={rowLoadingId === j.id} onClick={() => rerunJobFromRow(j.id)}>{rowLoadingId === j.id ? "Loading..." : "Re-run"}</button>
               </div>
             </div>
           ))}
