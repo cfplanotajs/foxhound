@@ -38,7 +38,7 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
 - `OPENAI_API_KEY` - server-side API key for OpenAI.
 - `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
 - `WORKER_POLL_INTERVAL_MS` - worker polling interval in milliseconds.
-- `WORKER_MAX_ATTEMPTS` - max retry attempts per task.
+- `WORKER_MAX_ATTEMPTS` - creation-time default retry attempts per task (sanitized to positive integer, default `3`, clamped `1..25`).
 - `WORKER_RETRY_BASE_MS` - base backoff delay in milliseconds.
 
 ## Local development flow

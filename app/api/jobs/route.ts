@@ -12,9 +12,10 @@ import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
 import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
+import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 
 const MAX_PROMPT_LINES = 50;
-const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
+const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 
 
 export async function POST(request: Request) {

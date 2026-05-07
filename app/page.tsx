@@ -157,19 +157,19 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-6">
-      <header className="rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Studio Image Console</h1>
+    <main className="mx-auto max-w-7xl space-y-6 bg-slate-50/60 p-6">
+      <header className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+        <h1 className="text-3xl font-bold text-slate-900">Foxhound Studio Console</h1>
         <p className="mt-2 text-slate-600">Generate consistent visual assets from reusable studio presets.</p>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
           {["Select Preset", "Write Prompt", "Worker Generates", "Review & Download"].map((step) => (
-            <div key={step} className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700">{step}</div>
+            <div key={step} className="rounded-xl bg-slate-100 px-3 py-2 text-slate-700">{step}</div>
           ))}
         </div>
       <div className="mt-4"><button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => setShowManager((v) => !v)}>{showManager ? "Hide Preset Manager" : "Manage Presets"}</button></div></header>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">Preset & Model</h2>
           <label className="grid gap-1">
             <span className="text-sm font-medium">Preset</span>
@@ -191,8 +191,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{presets.map((p) => <button key={p.id} type="button" className="rounded bg-slate-100 px-2 py-1 text-xs" onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>{p.samplePrompt ? `${p.name} sample` : `Use ${p.name}`}</button>)}</div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{presets.map((p) => <button key={p.id} type="button" className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium hover:bg-slate-200" onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>{p.samplePrompt ? `${p.name} sample` : `Use ${p.name}`}</button>)}</div>
           {error ? <p className="mb-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{error}</p> : null}
           <label className="grid gap-1 text-sm"><span className="font-medium">Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-20 rounded border p-2" /></label>
           <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-24 rounded border p-2" /></label>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
 
       
       {showManager ? (
-        <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Preset Manager</h2>
           <p className="text-sm text-slate-600">Create presets and versions without editing JSON.</p>
           <div className="mt-3 grid gap-2">
@@ -241,7 +241,7 @@ export default function DashboardPage() {
               const providerError = task.providerError;
 
               return (
-                <div key={task.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                   {task.imageUrl ? (
                     <img src={task.imageUrl} alt={task.subjectPrompt} className="mb-2 h-48 w-full rounded object-cover" />
                   ) : (

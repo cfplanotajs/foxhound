@@ -51,8 +51,8 @@ export async function POST(request: Request) {
       const stylePrompt = required(body.stylePrompt, "Style prompt is required.");
       const defaultModel = required(body.defaultModel, "Default model is required.");
       const defaultParams = parseDefaultParams(body.defaultParams);
-      if (provider === "openai" && !isSupportedOpenAIModel(body.defaultModel)) {
-        return NextResponse.json({ error: `Unsupported OpenAI image model: ${body.defaultModel}` }, { status: 400 });
+      if (provider === "openai" && !isSupportedOpenAIModel(defaultModel)) {
+        return NextResponse.json({ error: `Unsupported OpenAI image model: ${defaultModel}` }, { status: 400 });
       }
       const preset = await prisma.preset.create({
         data: {

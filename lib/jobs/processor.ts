@@ -7,8 +7,9 @@ import { buildProviderRequest, extractTaskParams, serializeTaskPayload } from "@
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 import { hasActionableTask, shouldRequeueAfterPass } from "@/lib/jobs/actionable";
 import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
+import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 
-const WORKER_MAX_ATTEMPTS = Number(process.env.WORKER_MAX_ATTEMPTS ?? "3");
+const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 const WORKER_RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? "5000");
 const WORKER_STALLED_AFTER_MS = Number(process.env.WORKER_STALLED_AFTER_MS ?? "900000");
 
