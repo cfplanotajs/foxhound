@@ -8,9 +8,18 @@ interface ParsedPayload {
   params?: StoredTaskParams;
   taskParams?: StoredTaskParams;
   providerPayload?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   size?: string;
   quality?: StoredTaskParams["quality"];
   count?: number;
+  model?: string;
+  prompt?: string;
+}
+
+export interface CanonicalTaskPayload {
+  taskParams: StoredTaskParams;
+  providerPayload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
 }
 
 export function parseStoredPayload(requestPayloadJson?: string | null): ParsedPayload {
@@ -20,6 +29,18 @@ export function parseStoredPayload(requestPayloadJson?: string | null): ParsedPa
   } catch {
     return {};
   }
+}
+
+export function parseTaskPayload(requestPayloadJson?: string | null): CanonicalTaskPayload {
+  const parsed = parseStoredPayload(requestPayloadJson);
+  const taskParams = extractTaskParams(requestPayloadJson);
+  const providerPayload =
+    parsed.providerPayload ??
+    (parsed.model || parsed.prompt || parsed.size || parsed.quality
+      ? { model: parsed.model, prompt: parsed.prompt, size: parsed.size, quality: parsed.quality }
+      : {});
+  const metadata = (parsed.metadata ?? {}) as Record<string, unknown>;
+  return { taskParams, providerPayload, metadata };
 }
 
 export function extractTaskParams(requestPayloadJson?: string | null): StoredTaskParams {
@@ -59,5 +80,20 @@ export function buildProviderRequest(input: {
 }
 
 export function serializeTaskPayload(taskParams: StoredTaskParams, providerPayload: Record<string, unknown>) {
-  return JSON.stringify({ taskParams: { ...taskParams, count: 1 }, providerPayload });
+  return JSON.stringify({ taskParams: { ...taskParams, count: 1 }, providerPayload, metadata: {} });
+}
+
+export function serializeTaskPayloadWithMetadata(taskParams: StoredTaskParams, providerPayload: Record<string, unknown>, metadata: Record<string, unknown>) {
+  return JSON.stringify({ taskParams: { ...taskParams, count: 1 }, providerPayload, metadata });
+}
+
+export function mergeProviderPayload(requestPayloadJson: string | null | undefined, providerPayload: Record<string, unknown>) {
+  const parsed = parseTaskPayload(requestPayloadJson);
+  return JSON.stringify({ taskParams: { ...parsed.taskParams, count: 1 }, providerPayload, metadata: parsed.metadata });
+}
+
+export function cloneTaskPayloadForRerun(requestPayloadJson: string | null | undefined, fallbackProviderPayload: Record<string, unknown>) {
+  const parsed = parseTaskPayload(requestPayloadJson);
+  const sourceProviderPayload = Object.keys(parsed.providerPayload).length > 0 ? parsed.providerPayload : fallbackProviderPayload;
+  return JSON.stringify({ taskParams: { ...parsed.taskParams, count: 1 }, providerPayload: sourceProviderPayload, metadata: parsed.metadata });
 }

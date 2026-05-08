@@ -63,6 +63,19 @@ The project uses Node's built-in test runner with `tsx` registration for TypeScr
 - `GET /api/jobs/:jobId/images`
 - `GET /api/images/:jobId/:taskId`
 - `GET /api/jobs/:jobId/download`
+- `GET /api/jobs/recent`
+- `GET /api/jobs/:jobId/template`
+- `POST /api/jobs/:jobId/rerun`
+- `POST /api/tasks/:taskId/review`
+
+## Recent jobs + duplicate/re-run
+- Recent jobs persist after refresh via `GET /api/jobs/recent`.
+- Duplicate uses `GET /api/jobs/:jobId/template` to copy the clicked job into the form (no auto-submit).
+- Re-run uses `POST /api/jobs/:jobId/rerun` to create a new job from the clicked source job.
+
+## Review statuses
+- Each task output has a separate review state: `unreviewed`, `favorite`, `approved`, `rejected`.
+- Review status is independent from generation status.
 
 ## Current limitations (MVP)
 - Only OpenAI provider is implemented.

@@ -30,7 +30,7 @@ export function toClientTaskDto(task: TaskForClient) {
   if (task.requestPayloadJson) {
     try {
       const parsed = JSON.parse(task.requestPayloadJson);
-      taskMeta = parsed?.providerPayload ?? null;
+      taskMeta = { ...(parsed?.providerPayload ?? {}), ...(parsed?.metadata ?? {}) };
     } catch {
       taskMeta = null;
     }

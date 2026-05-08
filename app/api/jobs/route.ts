@@ -6,7 +6,7 @@ import { getPresetByStableKey, seedPresetsFromConfig } from "@/lib/presets";
 import { getEnv, MISSING_OPENAI_KEY_MESSAGE } from "@/lib/env";
 import { createJobSchema } from "@/lib/jobs/validation";
 import { isIdempotencyCollisionError } from "@/lib/jobs/idempotency";
-import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
+import { serializeTaskPayloadWithMetadata } from "@/lib/jobs/provider-payload";
 import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
 import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
@@ -84,9 +84,10 @@ export async function POST(request: Request) {
             defaultProviderSnapshot: preset.defaultProvider,
             defaultModelSnapshot: preset.defaultModel,
             defaultParamsJsonSnapshot: JSON.stringify(preset.defaultParams),
-            requestPayloadJson: serializeTaskPayload(
+            requestPayloadJson: serializeTaskPayloadWithMetadata(
               { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: resolvedSize, quality: normalizedQuality as any },
-              { model, size: resolvedSize, quality: normalizedQuality, supportedModels: provider === "openai" ? listSupportedOpenAIModels() : ["mock-v1"], variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1" }
+              { model, size: resolvedSize, quality: normalizedQuality, supportedModels: provider === "openai" ? listSupportedOpenAIModels() : ["mock-v1"] },
+              { variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1", resolvedSize: resolvedSize }
             ),
             presetVersionId: preset.versionId
           }))

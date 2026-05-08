@@ -9,7 +9,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    jobs: jobs.map((job) => {
+    jobs: jobs.map((job: any) => {
       const tasks = job.tasks;
       return {
         id: job.id,
@@ -20,10 +20,10 @@ export async function GET() {
         presetName: tasks[0]?.presetName ?? null,
         presetVersion: tasks[0]?.presetVersion ?? null,
         counts: {
-          completed: tasks.filter((t) => t.status === "completed").length,
-          failed: tasks.filter((t) => t.status === "failed").length,
-          queued: tasks.filter((t) => t.status === "queued").length,
-          processing: tasks.filter((t) => t.status === "processing").length
+          completed: tasks.filter((t: any) => t.status === "completed").length,
+          failed: tasks.filter((t: any) => t.status === "failed").length,
+          queued: tasks.filter((t: any) => t.status === "queued").length,
+          processing: tasks.filter((t: any) => t.status === "processing").length
         }
       };
     })

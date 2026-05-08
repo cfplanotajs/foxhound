@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createJobAndTasksAtomic } from "@/lib/jobs/create-job";
-import { serializeTaskPayload } from "@/lib/jobs/provider-payload";
+import { cloneTaskPayloadForRerun } from "@/lib/jobs/provider-payload";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -13,7 +13,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ jo
 
   const job = await createJobAndTasksAtomic(prisma as never, {
     jobData: { status: "queued", provider: source.provider, model: source.model },
-    taskData: source.tasks.map((task) => ({
+    taskData: source.tasks.map((task: any) => ({
       presetId: task.presetId,
       presetName: task.presetName,
       presetVersion: task.presetVersion,
@@ -30,7 +30,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ jo
       defaultProviderSnapshot: task.defaultProviderSnapshot,
       defaultModelSnapshot: task.defaultModelSnapshot,
       defaultParamsJsonSnapshot: task.defaultParamsJsonSnapshot,
-      requestPayloadJson: serializeTaskPayload({}, JSON.parse(task.requestPayloadJson ?? "{}").providerPayload ?? { model: task.model }),
+      requestPayloadJson: cloneTaskPayloadForRerun(task.requestPayloadJson, { model: task.model }),
       presetVersionId: task.presetVersionId
     }))
   });
