@@ -11,12 +11,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
   const payload = parseTaskPayload(first.requestPayloadJson);
   const providerPayload: any = payload.providerPayload ?? {};
   const metadata: any = payload.metadata ?? {};
+  const promptLines = Array.from(new Set(job.tasks.map((t: any) => t.subjectPrompt)));
   return NextResponse.json({
     template: {
       jobId: job.id,
       provider: job.provider,
       model: job.model,
-      promptLines: job.tasks.map((t: any) => t.subjectPrompt),
+      promptLines,
       presetId: first.presetId,
       presetName: first.presetName,
       presetVersion: first.presetVersion,

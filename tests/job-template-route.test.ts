@@ -11,13 +11,18 @@ test("job template route returns safe duplicate/rerun fields", async () => {
     status: "completed",
     provider: "mock",
     model: "mock-v1",
-    tasks: [{ presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { aspectRatio: "1:1", variationCount: 2, quality: "high", size: "1024x1024" } }) }]
+    tasks: [
+      { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { aspectRatio: "1:1", variationCount: 2, quality: "high", size: "1024x1024" } }) },
+      { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { aspectRatio: "1:1", variationCount: 2, quality: "high", size: "1024x1024" } }) },
+      { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "dog", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { aspectRatio: "1:1", variationCount: 2, quality: "high", size: "1024x1024" } }) }
+    ]
   });
   (prisma.preset as any).findUnique = async () => ({ stableKey: "p1", isArchived: false });
   const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
   const data = await res.json();
   assert.equal(data.template.jobId, "j1");
   assert.equal(data.template.variationCount, 2);
+  assert.deepEqual(data.template.promptLines, ["cat", "dog"]);
   assert.equal("outputPath" in data.template, false);
   (prisma.generationJob as any).findUnique = origJob;
   (prisma.preset as any).findUnique = origPreset;

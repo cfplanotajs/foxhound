@@ -91,6 +91,14 @@ export async function POST(request: Request) {
       const source = await prisma.preset.findUnique({ where: { stableKey: body.stableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
       if (!source || !source.versions[0]) return NextResponse.json({ error: "Preset not found" }, { status: 404 });
       const latest = source.versions[0];
+      const defaultParams = JSON.parse(latest.defaultParamsJson ?? "{}") as Record<string, unknown>;
+      const contentHash = hashPresetContent({
+        stylePrompt: latest.stylePrompt,
+        defaultProvider: latest.defaultProvider,
+        defaultModel: latest.defaultModel,
+        defaultParams,
+        samplePrompt: latest.samplePrompt
+      });
       const created = await prisma.preset.create({
         data: {
           stableKey: body.newStableKey,
@@ -105,7 +113,7 @@ export async function POST(request: Request) {
               defaultModel: latest.defaultModel,
               defaultParamsJson: latest.defaultParamsJson,
               samplePrompt: latest.samplePrompt,
-              contentHash: `${latest.contentHash}-${Date.now()}`
+              contentHash
             }
           }
         }

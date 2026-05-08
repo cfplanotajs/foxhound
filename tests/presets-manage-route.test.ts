@@ -68,3 +68,46 @@ test("edit ignores client contentHash and does not create duplicate version for 
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
 });
+
+test("duplicate uses deterministic contentHash derived from content", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origCreate = prisma.preset.create;
+  let createdArgs: any = null;
+  (prisma.preset as any).findUnique = async () => ({
+    id: "src1",
+    stableKey: "source",
+    description: "desc",
+    bestUseLabel: null,
+    versions: [{
+      version: "v3",
+      stylePrompt: "Style",
+      defaultProvider: "openai",
+      defaultModel: "gpt-image-2",
+      defaultParamsJson: JSON.stringify({ size: "1536x1024" }),
+      samplePrompt: null,
+      contentHash: "old-hash"
+    }]
+  });
+  (prisma.preset as any).create = async (args: any) => {
+    createdArgs = args;
+    return { id: "new1" };
+  };
+
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "duplicate", stableKey: "source", newStableKey: "copy", newName: "Copy" })
+  }));
+  assert.equal(res.status, 200);
+
+  const expectedHash = hashPresetContent({
+    stylePrompt: "Style",
+    defaultProvider: "openai",
+    defaultModel: "gpt-image-2",
+    defaultParams: { size: "1536x1024" },
+    samplePrompt: null
+  });
+  assert.equal(createdArgs.data.versions.create.contentHash, expectedHash);
+
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).create = origCreate;
+});
