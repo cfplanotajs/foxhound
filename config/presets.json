@@ -1,0 +1,66 @@
+[
+  {
+    "id": "kids_vector_card_illustration_v1",
+    "name": "Kids Vector Card Illustration",
+    "version": "v1",
+    "description": "Clean educational card-style vector art for kids activities and flashcards.",
+    "bestUseLabel": "Card art",
+    "samplePrompt": "A cheerful raccoon explorer holding a giant map, bold 2D cartoon card-game style, no text",
+    "stylePrompt": "Flat vector illustration, clear silhouette, playful proportions, rounded shapes, bright friendly palette, strong contrast, minimal background distractions, no text, no watermark.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "clean_sticker_character_white_bg_v1",
+    "name": "Clean Sticker Character (White BG)",
+    "version": "v1",
+    "description": "Single sticker-ready character centered on white background.",
+    "bestUseLabel": "Sticker mascot",
+    "samplePrompt": "A cute fox wearing a tiny backpack, isolated on white background, clean die-cut sticker style",
+    "stylePrompt": "Single cute character sticker, centered composition, crisp outline, high readability at small sizes, white background, no scene clutter, no text, printable feel.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "storybook_habitat_background_concept_v1",
+    "name": "Storybook Habitat Background Concept",
+    "version": "v1",
+    "description": "Painterly storybook environment concepts for educational backgrounds.",
+    "bestUseLabel": "Background scene",
+    "samplePrompt": "A warm educational kelp forest habitat background with sea otters, fish, and sunlight rays, not too busy",
+    "stylePrompt": "Storybook environment concept art, gentle brush texture, layered depth, cozy lighting, child-friendly realism, coherent color story, no characters unless requested, no text.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1536x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "amazon_photoreal_lifestyle_product_v1",
+    "name": "Amazon Photoreal Lifestyle Product",
+    "version": "v1",
+    "description": "Photorealistic product-in-context hero imagery for marketplace listing assets.",
+    "bestUseLabel": "Lifestyle product",
+    "samplePrompt": "A bright realistic lifestyle photo of a child using an educational sticker book at a wooden table",
+    "stylePrompt": "Photorealistic lifestyle product scene, realistic lighting and shadows, natural materials, accurate product proportions, commercially clean composition, high detail, no text overlays, no logos.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1536x1024",
+      "quality": "high",
+      "count": 1
+    }
+  }
+]
