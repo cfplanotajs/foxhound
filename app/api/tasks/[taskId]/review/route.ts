@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { toClientTaskDto } from "@/lib/jobs/image-dto";
@@ -10,9 +11,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid review status." }, { status: 400 });
   const status = parsed.data.reviewStatus;
-  const task = await prisma.generationTask.update({
-    where: { id: taskId },
-    data: { reviewStatus: status, reviewedAt: status === "unreviewed" ? null : new Date() }
-  });
+  let task;
+  try {
+    task = await prisma.generationTask.update({
+      where: { id: taskId },
+      data: { reviewStatus: status, reviewedAt: status === "unreviewed" ? null : new Date() }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+    throw error;
+  }
   return NextResponse.json({ task: toClientTaskDto(task as never) });
 }

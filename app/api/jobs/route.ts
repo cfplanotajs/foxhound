@@ -13,8 +13,8 @@ import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
 import { assertSupportedOpenAIModel, listSupportedOpenAIModels } from "@/lib/providers/openai-models";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
-import { resolveSizeForModel } from "@/lib/providers/image-size-presets";
 import { normalizeQualityForModel } from "@/lib/providers/model-quality";
+import { resolveFinalTaskSize } from "@/lib/jobs/task-size";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
@@ -57,8 +57,10 @@ export async function POST(request: Request) {
     if (subjectPrompts.length > MAX_PROMPT_LINES) return NextResponse.json({ error: "Too many prompt lines" }, { status: 400 });
 
     const variationCount = body.variationCount ?? 1;
-    const resolvedSize = resolveSizeForModel(model, body.aspectRatio ?? "1:1");
-    if (!resolvedSize) return NextResponse.json({ error: "Selected aspect ratio is not supported for this model." }, { status: 400 });
+    const hasExplicitAspectRatio = typeof body.aspectRatio === "string" && body.aspectRatio.length > 0;
+    const sizeResolution = resolveFinalTaskSize({ model, aspectRatio: body.aspectRatio, presetDefaultSize: (preset.defaultParams as { size?: string } | null | undefined)?.size ?? null });
+    if (!sizeResolution.ok) return NextResponse.json({ error: body.aspectRatio ? "Selected aspect ratio is not supported for this model." : "Unable to resolve image size for selected model." }, { status: 400 });
+    const finalSize = sizeResolution.finalSize as string;
 
     let job;
     try {
@@ -85,9 +87,9 @@ export async function POST(request: Request) {
             defaultModelSnapshot: preset.defaultModel,
             defaultParamsJsonSnapshot: JSON.stringify(preset.defaultParams),
             requestPayloadJson: serializeTaskPayloadWithMetadata(
-              { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: resolvedSize, quality: normalizedQuality as any },
-              { model, size: resolvedSize, quality: normalizedQuality, supportedModels: provider === "openai" ? listSupportedOpenAIModels() : ["mock-v1"] },
-              { variationIndex, variationCount, aspectRatio: body.aspectRatio ?? "1:1", resolvedSize: resolvedSize }
+              { ...(preset.defaultParams as { size?: string; quality?: "low" | "medium" | "high" | "auto"; count?: number }), size: finalSize, quality: normalizedQuality as any },
+              { model, size: finalSize, quality: normalizedQuality, supportedModels: provider === "openai" ? listSupportedOpenAIModels() : ["mock-v1"] },
+              { variationIndex, variationCount, ...(hasExplicitAspectRatio ? { aspectRatio: body.aspectRatio } : {}), resolvedSize: finalSize }
             ),
             presetVersionId: preset.versionId
           }))
