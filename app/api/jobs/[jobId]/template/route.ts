@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseTaskPayload } from "@/lib/jobs/provider-payload";
+import { inferAspectRatioFromSize } from "@/lib/jobs/task-size";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -11,6 +12,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
   const payload = parseTaskPayload(first.requestPayloadJson);
   const providerPayload: any = payload.providerPayload ?? {};
   const metadata: any = payload.metadata ?? {};
+  const size = payload.taskParams.size ?? providerPayload.size ?? null;
+  const aspectRatio =
+    (typeof metadata.aspectRatio === "string" && metadata.aspectRatio.length > 0 ? metadata.aspectRatio : null) ??
+    (typeof providerPayload.aspectRatio === "string" && providerPayload.aspectRatio.length > 0 ? providerPayload.aspectRatio : null) ??
+    inferAspectRatioFromSize(typeof size === "string" ? size : null);
   const promptLines = Array.from(new Set(job.tasks.map((t: any) => t.subjectPrompt)));
   return NextResponse.json({
     template: {
@@ -22,8 +28,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
       presetName: first.presetName,
       presetVersion: first.presetVersion,
       presetSelectable: !!preset && !preset.isArchived,
-      aspectRatio: metadata.aspectRatio ?? providerPayload.aspectRatio ?? "1:1",
-      size: payload.taskParams.size ?? providerPayload.size ?? null,
+      aspectRatio,
+      size,
       quality: payload.taskParams.quality ?? providerPayload.quality ?? null,
       variationCount: metadata.variationCount ?? providerPayload.variationCount ?? 1,
       constraints: first.constraints ?? null,
