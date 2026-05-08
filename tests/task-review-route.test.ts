@@ -11,13 +11,19 @@ test("review route rejects invalid status", async () => {
 
 test("review route updates valid status", async () => {
   const orig = prisma.generationTask.update;
-  (prisma.generationTask as any).update = async ({ data }: any) => ({
-    id: "t1", jobId: "j1", status: "completed", subjectPrompt: "p", finalPrompt: "f", presetName: "n", presetVersion: "v1", provider: "mock", model: "mock-v1", errorMessage: null, responseMetadataJson: null, createdAt: new Date(), completedAt: null, outputPath: null, reviewStatus: data.reviewStatus
-  });
+  let updateArgs: any = null;
+  (prisma.generationTask as any).update = async (args: any) => {
+    updateArgs = args;
+    return {
+      id: "t1", jobId: "j1", status: "completed", subjectPrompt: "p", finalPrompt: "f", presetName: "n", presetVersion: "v1", provider: "mock", model: "mock-v1", errorMessage: null, responseMetadataJson: null, createdAt: new Date(), completedAt: null, outputPath: null, reviewStatus: args.data.reviewStatus
+    };
+  };
   const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ reviewStatus: "favorite" }) }), { params: Promise.resolve({ taskId: "t1" }) });
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.equal(data.task.reviewStatus, "favorite");
+  assert.equal(updateArgs.where.id, "t1");
+  assert.deepEqual(Object.keys(updateArgs.data).sort(), ["reviewStatus", "reviewedAt"]);
   (prisma.generationTask as any).update = orig;
 });
 
@@ -30,5 +36,17 @@ test("review route returns 404 for missing task", async () => {
   assert.equal(res.status, 404);
   const data = await res.json();
   assert.equal(data.error, "Task not found");
+  (prisma.generationTask as any).update = orig;
+});
+
+test("review route returns safe 500 on unexpected update error", async () => {
+  const orig = prisma.generationTask.update;
+  (prisma.generationTask as any).update = async () => {
+    throw new Error("database exploded");
+  };
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ reviewStatus: "approved" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 500);
+  const data = await res.json();
+  assert.equal(data.error, "Internal server error");
   (prisma.generationTask as any).update = orig;
 });

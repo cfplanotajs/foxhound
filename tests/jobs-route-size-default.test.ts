@@ -20,3 +20,10 @@ test("resolveFinalTaskSize rejects unsupported preset default size for selected 
   assert.equal((out as any).reason, "unsupported-size");
   assert.equal((out as any).attemptedSize, "1536x1024");
 });
+
+
+test("resolveFinalTaskSize treats blank aspect ratio as omitted and keeps preset default", () => {
+  const out = resolveFinalTaskSize({ model: "gpt-image-1", presetDefaultSize: "1536x1024", aspectRatio: "" });
+  assert.equal(out.ok, true);
+  assert.equal(out.finalSize, "1536x1024");
+});
