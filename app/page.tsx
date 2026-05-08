@@ -144,22 +144,27 @@ export default function DashboardPage() {
   }
   async function duplicateJobIntoForm(targetJobId: string) {
     setRowLoadingId(targetJobId);
-    const templateRes = await fetch(`/api/jobs/${targetJobId}/template`);
-    const templateData = await templateRes.json();
-    if (!templateRes.ok) {
+    const [jobRes, imgRes] = await Promise.all([fetch(`/api/jobs/${targetJobId}`), fetch(`/api/jobs/${targetJobId}/images`)]);
+    const jobData = await jobRes.json();
+    const imgData = await imgRes.json();
+    if (!jobRes.ok || !imgRes.ok) {
       setToast("Could not copy job into form.");
       setRowLoadingId(null);
       return;
     }
-    const tpl = templateData.template;
-    setSinglePrompt((tpl.promptLines ?? []).join("\n"));
-    setProvider(tpl.provider);
-    setModel(tpl.model);
-    if (tpl.aspectRatio) setAspectRatio(tpl.aspectRatio);
-    if (tpl.variationCount) setVariationCount(tpl.variationCount);
-    if (tpl.quality) setQuality(tpl.quality);
-    if (tpl.presetSelectable && presets.find((p) => p.id === tpl.presetId)) setPresetId(tpl.presetId);
-    if (!tpl.presetSelectable) {
+    const sourceTasks: JobTask[] = imgData.tasks ?? [];
+    setSinglePrompt(sourceTasks.map((t) => t.subjectPrompt).join("\n"));
+    setProvider(jobData.job.provider);
+    setModel(jobData.job.model);
+    if (sourceTasks[0]?.aspectRatio) setAspectRatio(sourceTasks[0].aspectRatio);
+    if (sourceTasks[0]?.variationCount) setVariationCount(sourceTasks[0].variationCount);
+    if (sourceTasks[0]?.size && sourceTasks[0]?.aspectRatio == null) setAspectRatio("1:1");
+    if (sourceTasks[0] && sourceTasks[0].size) {
+      const payload = (sourceTasks[0] as any);
+      if (payload.quality) setQuality(payload.quality);
+    }
+    const sourcePreset = sourceTasks[0]?.presetName;
+    if (sourcePreset && !presets.find((p) => p.name === sourcePreset)) {
       setToast("Job copied into the form, but source preset is unavailable. Choose an active preset.");
     } else {
       setToast("Job copied into the form. Adjust and submit when ready.");
