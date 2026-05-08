@@ -13,3 +13,10 @@ test("resolveFinalTaskSize uses explicit aspect ratio when provided", () => {
   assert.equal(out.ok, true);
   assert.equal(out.finalSize, "1024x1024");
 });
+
+test("resolveFinalTaskSize rejects unsupported preset default size for selected model", () => {
+  const out = resolveFinalTaskSize({ model: "dall-e-3", presetDefaultSize: "1536x1024" });
+  assert.equal(out.ok, false);
+  assert.equal((out as any).reason, "unsupported-size");
+  assert.equal((out as any).attemptedSize, "1536x1024");
+});

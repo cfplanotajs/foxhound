@@ -59,7 +59,12 @@ export async function POST(request: Request) {
     const variationCount = body.variationCount ?? 1;
     const hasExplicitAspectRatio = typeof body.aspectRatio === "string" && body.aspectRatio.length > 0;
     const sizeResolution = resolveFinalTaskSize({ model, aspectRatio: body.aspectRatio, presetDefaultSize: (preset.defaultParams as { size?: string } | null | undefined)?.size ?? null });
-    if (!sizeResolution.ok) return NextResponse.json({ error: body.aspectRatio ? "Selected aspect ratio is not supported for this model." : "Unable to resolve image size for selected model." }, { status: 400 });
+    if (!sizeResolution.ok) {
+      if (sizeResolution.reason === "unsupported-size" && sizeResolution.attemptedSize) {
+        return NextResponse.json({ error: `Size ${sizeResolution.attemptedSize} is not supported by model ${model}` }, { status: 400 });
+      }
+      return NextResponse.json({ error: body.aspectRatio ? "Selected aspect ratio is not supported for this model." : "Unable to resolve image size for selected model." }, { status: 400 });
+    }
     const finalSize = sizeResolution.finalSize as string;
 
     let job;
