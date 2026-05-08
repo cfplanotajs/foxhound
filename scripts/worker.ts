@@ -1,6 +1,7 @@
 import { processNextQueuedJob } from "../lib/jobs/processor";
+import { getWorkerPollIntervalMs } from "../lib/jobs/worker-config";
 
-const pollMs = Number(process.env.WORKER_POLL_INTERVAL_MS ?? "5000");
+const pollMs = getWorkerPollIntervalMs();
 let running = true;
 
 console.info(`[worker] started poll=${pollMs}ms`);

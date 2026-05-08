@@ -8,9 +8,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
     const task = await prisma.generationTask.findFirst({ where: { id: taskId, jobId } });
     if (!task?.outputPath) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const bytes = await fs.readFile(task.outputPath);
+    let bytes;
+    try {
+      bytes = await fs.readFile(task.outputPath);
+    } catch (error) {
+      const maybe = error as NodeJS.ErrnoException;
+      if (maybe?.code === "ENOENT") return NextResponse.json({ error: "Image file not found" }, { status: 404 });
+      throw error;
+    }
     return new NextResponse(bytes, { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=60" } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

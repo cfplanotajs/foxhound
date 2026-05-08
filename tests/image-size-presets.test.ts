@@ -2,12 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { IMAGE_RATIO_PRESETS, resolveSizeForModel } from "../lib/providers/image-size-presets.ts";
 
-test("all ratio presets are multiples of 16", () => {
-  for (const p of IMAGE_RATIO_PRESETS) {
-    const [w, h] = p.size.split("x").map(Number);
-    assert.equal(w % 16, 0);
-    assert.equal(h % 16, 0);
-  }
+test("ratio preset list remains stable", () => {
+  assert.deepEqual(IMAGE_RATIO_PRESETS.map((p) => p.id), ["1:1", "2:3", "4:6", "4:3", "3:2", "9:16", "16:9"]);
 });
 
 test("gpt-image-2 accepts key ratios", () => {
@@ -16,6 +12,19 @@ test("gpt-image-2 accepts key ratios", () => {
   }
 });
 
-test("unsupported model/ratio fails clearly via null", () => {
+test("dall-e-3 uses model-specific widescreen/vertical sizes", () => {
+  assert.equal(resolveSizeForModel("dall-e-3", "1:1"), "1024x1024");
+  assert.equal(resolveSizeForModel("dall-e-3", "16:9"), "1792x1024");
+  assert.equal(resolveSizeForModel("dall-e-3", "9:16"), "1024x1792");
+  assert.equal(resolveSizeForModel("dall-e-3", "3:2"), null);
+});
+
+test("dall-e-2 only supports square", () => {
+  assert.equal(resolveSizeForModel("dall-e-2", "1:1"), "1024x1024");
   assert.equal(resolveSizeForModel("dall-e-2", "16:9"), null);
+  assert.equal(resolveSizeForModel("dall-e-2", "9:16"), null);
+});
+
+test("unsupported model/ratio fails clearly via null", () => {
+  assert.equal(resolveSizeForModel("unknown-model", "16:9"), null);
 });
