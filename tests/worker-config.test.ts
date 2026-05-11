@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getWorkerMaxAttempts, getWorkerPollIntervalMs, getWorkerRetryBaseMs, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
+import { getWorkerMaxAttempts, getWorkerPollIntervalMs, getWorkerRetryBaseMs, getWorkerStalledAfterMs, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
 
 test("missing value falls back to default", () => {
   assert.equal(parsePositiveIntEnv(undefined, 3), 3);
@@ -61,4 +61,26 @@ test("getWorkerPollIntervalMs sanitizes malformed values", () => {
   process.env.WORKER_POLL_INTERVAL_MS = "9999999";
   assert.equal(getWorkerPollIntervalMs(), 300000);
   process.env.WORKER_POLL_INTERVAL_MS = old;
+});
+
+
+test("getWorkerStalledAfterMs sanitizes malformed values", () => {
+  const old = process.env.WORKER_STALLED_AFTER_MS;
+  delete process.env.WORKER_STALLED_AFTER_MS;
+  assert.equal(getWorkerStalledAfterMs(), 900000);
+  process.env.WORKER_STALLED_AFTER_MS = "abc";
+  assert.equal(getWorkerStalledAfterMs(), 900000);
+  process.env.WORKER_STALLED_AFTER_MS = "   ";
+  assert.equal(getWorkerStalledAfterMs(), 900000);
+  process.env.WORKER_STALLED_AFTER_MS = "0";
+  assert.equal(getWorkerStalledAfterMs(), 60000);
+  process.env.WORKER_STALLED_AFTER_MS = "-10";
+  assert.equal(getWorkerStalledAfterMs(), 60000);
+  process.env.WORKER_STALLED_AFTER_MS = "120000.9";
+  assert.equal(getWorkerStalledAfterMs(), 900000);
+  process.env.WORKER_STALLED_AFTER_MS = "999999999";
+  assert.equal(getWorkerStalledAfterMs(), 86400000);
+  process.env.WORKER_STALLED_AFTER_MS = "120000";
+  assert.equal(getWorkerStalledAfterMs(), 120000);
+  process.env.WORKER_STALLED_AFTER_MS = old;
 });

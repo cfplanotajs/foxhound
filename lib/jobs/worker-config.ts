@@ -19,3 +19,7 @@ export function getWorkerRetryBaseMs(): number {
 export function getWorkerPollIntervalMs(): number {
   return parsePositiveIntEnv(process.env.WORKER_POLL_INTERVAL_MS, 5000, 1000, 300000);
 }
+
+export function getWorkerStalledAfterMs(): number {
+  return parsePositiveIntEnv(process.env.WORKER_STALLED_AFTER_MS, 900000, 60000, 86400000);
+}

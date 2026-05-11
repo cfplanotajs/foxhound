@@ -111,3 +111,53 @@ test("duplicate uses deterministic contentHash derived from content", async () =
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).create = origCreate;
 });
+
+
+test("create requires stableKey", async () => {
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} })
+  }));
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "Preset stableKey is required.");
+});
+
+test("create rejects invalid stableKey characters", async () => {
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "Bad Key!", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} })
+  }));
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "Preset stableKey must use only lowercase letters, numbers, hyphens, or underscores.");
+});
+
+test("create trims and saves valid stableKey", async () => {
+  const origCreate = prisma.preset.create;
+  let createdArgs: any = null;
+  (prisma.preset as any).create = async (args: any) => {
+    createdArgs = args;
+    return { id: "p-new" };
+  };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "  valid_key-1  ", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} })
+  }));
+  assert.equal(res.status, 200);
+  assert.equal(createdArgs.data.stableKey, "valid_key-1");
+  (prisma.preset as any).create = origCreate;
+});
+
+test("create returns clear error on stableKey conflict", async () => {
+  const origCreate = prisma.preset.create;
+  (prisma.preset as any).create = async () => { throw new Error("Unique constraint failed on the fields: (`stableKey`)"); };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "dupe_key", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} })
+  }));
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "Preset stableKey already exists.");
+  (prisma.preset as any).create = origCreate;
+});

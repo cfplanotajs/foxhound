@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
-import { normalizePresetProviderModel, parseDefaultParams, requiredText } from "@/lib/presets/manage-validation";
+import { normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
 
 export async function GET() {
   const rows = await prisma.preset.findMany({ include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } });
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       const defaultParams = parseDefaultParams(body.defaultParams);
       const preset = await prisma.preset.create({
         data: {
-          stableKey: body.stableKey,
+          stableKey: validatePresetStableKey(body.stableKey),
           name,
           description: body.description ?? "",
           bestUseLabel: body.bestUseLabel ?? null,
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "edit") {
-      const preset = await prisma.preset.findUnique({ where: { stableKey: body.stableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
+      const preset = await prisma.preset.findUnique({ where: { stableKey: validatePresetStableKey(body.stableKey) }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
       if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 404 });
       const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
       const name = requiredText(body.name, "Preset name is required.");
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "archive") {
-      const stableKey = requiredText(body.stableKey, "Preset stableKey is required.");
+      const stableKey = validatePresetStableKey(body.stableKey);
       await prisma.preset.update({ where: { stableKey }, data: { isArchived: !!body.isArchived } });
       return NextResponse.json({ ok: true });
     }
@@ -133,7 +133,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) return NextResponse.json({ error: error.message }, { status: 400 });
-    if (error instanceof Error && /(required|valid JSON)/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof Error && /(required|valid JSON|must use only lowercase letters)/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof Error && error.message.includes("Unique constraint failed") && error.message.includes("stableKey")) {
+      return NextResponse.json({ error: "Preset stableKey already exists." }, { status: 400 });
+    }
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
