@@ -1,16 +1,26 @@
 import { NextResponse } from "next/server";
 import { getActivePresets, seedPresetsFromConfig } from "@/lib/presets";
 import { getEnv } from "@/lib/env";
+import { normalizePresetDefaultsForModel } from "@/lib/presets/defaults-normalizer";
 
 export async function GET() {
   try {
     await seedPresetsFromConfig();
     const presets = await getActivePresets();
     const envModel = getEnv().OPENAI_IMAGE_MODEL?.trim();
-    const normalized = presets.map((preset) => ({
-      ...preset,
-      defaultModel: preset.defaultProvider === "openai" && envModel ? envModel : preset.defaultModel
-    }));
+    const normalized = presets.map((preset) => {
+      const effectiveModel = preset.defaultProvider === "openai" && envModel ? envModel : preset.defaultModel;
+      const defaultParams = normalizePresetDefaultsForModel({
+        provider: preset.defaultProvider,
+        model: effectiveModel,
+        defaultParams: (preset.defaultParams ?? {}) as Record<string, unknown>
+      });
+      return {
+        ...preset,
+        defaultModel: effectiveModel,
+        defaultParams
+      };
+    });
     return NextResponse.json({ presets: normalized });
   } catch (error) {
     if (error instanceof Error && error.message === "Preset default model is not supported by this app configuration.") {

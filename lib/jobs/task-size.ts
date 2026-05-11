@@ -26,7 +26,9 @@ export function inferAspectRatioFromSize(size?: string | null): string | null {
     "1536x1152": "4:3",
     "1024x1536": "2:3",
     "1152x2048": "9:16",
-    "1536x864": "16:9"
+    "1536x864": "16:9",
+    "1792x1024": "16:9",
+    "1024x1792": "9:16"
   };
   if (!size) return null;
   return map[size] ?? null;
