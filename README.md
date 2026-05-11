@@ -3,7 +3,7 @@
 Local internal tool for standardized AI image generation workflows for studio teams.
 
 ## MVP workflow
-Preset → Prompt composition → Job enqueue → Worker processes queued jobs → Local image save → Gallery → Audit log → ZIP download.
+Preset → Prompt composition → Job enqueue → Worker processes queued jobs → Local image save → Gallery → Review → ZIP download.
 
 ## Stack
 - Next.js (App Router)
@@ -21,79 +21,61 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
    ```bash
    cp .env.example .env
    ```
-3. Set `OPENAI_API_KEY` in `.env`.
-4. Generate Prisma client and run migrations:
+3. Configure `.env`:
+   - `DATABASE_URL` (required)
+   - `OPENAI_API_KEY` (optional for Demo Mode, required for OpenAI mode)
+4. Initialize database and presets:
    ```bash
    npm run prisma:generate
    npm run prisma:migrate
-   ```
-5. Run the app and worker in separate terminals:
-   ```bash
-   npm run dev
-   npm run worker
+   npm run presets:seed
    ```
 
-## Environment variables
-- `DATABASE_URL` - SQLite database path.
-- `OPENAI_API_KEY` - server-side API key for OpenAI.
-- `OPENAI_IMAGE_MODEL` - default model override (e.g. `gpt-image-2`).
-- `WORKER_POLL_INTERVAL_MS` - worker polling interval in milliseconds.
-- `WORKER_MAX_ATTEMPTS` - creation-time default retry attempts per task (sanitized to positive integer, default `3`, clamped `1..25`).
-- `WORKER_RETRY_BASE_MS` - base backoff delay in milliseconds.
+## Run locally
+Terminal 1:
+```bash
+npm run dev
+```
 
-## Local development flow
-1. `npm run dev`
-2. `npm run worker`
-3. Submit a job from dashboard
-4. Worker logs claim/process lifecycle
-5. Refresh gallery and download ZIP
+Terminal 2:
+```bash
+npm run worker
+```
+
+## Demo script (stakeholder-ready)
+1. Open dashboard and choose **Demo Mode (Mock)**.
+2. Pick an active preset.
+3. Choose aspect ratio, variation count, and quality.
+4. Click a sample prompt chip (or type one).
+5. Submit job and wait for worker to process.
+6. Review outputs in gallery using **Favorite / Approved / Rejected**.
+7. Filter gallery with review chips (All/Favorites/Approved/Rejected).
+8. Download ZIP from current job summary.
+9. In Recent Jobs:
+   - **Open** to inspect a job.
+   - **Duplicate** to copy settings back to form (does not submit).
+   - **Re-run** to immediately create a new job.
+
+## Demo Mode vs OpenAI mode
+- **Demo Mode (mock)**
+  - no external API calls
+  - generates deterministic placeholder images
+  - validates end-to-end workflow without usage credits
+- **OpenAI mode**
+  - requires server-side `OPENAI_API_KEY`
+  - never use `NEXT_PUBLIC_OPENAI_API_KEY`
+  - model/size/quality are validated server-side
 
 ## Tests
-Run tests with:
+Run:
 ```bash
 npm test
+npm run lint
+npm run typecheck
+npm run build
 ```
-The project uses Node's built-in test runner with `tsx` registration for TypeScript test files.
-
-## Core API routes
-- `GET /api/presets`
-- `POST /api/jobs` (enqueue)
-- `POST /api/jobs/process` (manual process trigger)
-- `GET /api/jobs/:jobId`
-- `GET /api/jobs/:jobId/images`
-- `GET /api/images/:jobId/:taskId`
-- `GET /api/jobs/:jobId/download`
-- `GET /api/jobs/recent`
-- `GET /api/jobs/:jobId/template`
-- `POST /api/jobs/:jobId/rerun`
-- `POST /api/tasks/:taskId/review`
-
-## Recent jobs + duplicate/re-run
-- Recent jobs persist after refresh via `GET /api/jobs/recent`.
-- Duplicate uses `GET /api/jobs/:jobId/template` to copy the clicked job into the form (no auto-submit).
-- Re-run uses `POST /api/jobs/:jobId/rerun` to create a new job from the clicked source job.
-
-## Review statuses
-- Each task output has a separate review state: `unreviewed`, `favorite`, `approved`, `rejected`.
-- Review status is independent from generation status.
 
 ## Current limitations (MVP)
-- Only OpenAI provider is implemented.
-- Worker is simple local poller, not distributed queue infra.
-- No auth system, cloud storage, CSV upload, or batch mode yet.
-
-## Roadmap
-- Add provider adapters for Gemini/Nano Banana and Fal/Flux.
-- Add richer queue observability and admin controls.
-- Add OpenAI Batch API mode.
-
-
-## Phase 3 preset seed
-
-After migrations, presets are auto-seeded from `config/presets.json` when `/api/presets` or job creation endpoints are called.
-For local setup run:
-
-```bash
-DATABASE_URL=file:./prisma/dev.db npx prisma migrate dev
-DATABASE_URL=file:./prisma/dev.db npm run prisma:generate
-```
+- Single-tenant local app (no auth/permissions).
+- Local worker poller only.
+- No cloud storage or deployment tooling in-scope.
