@@ -78,3 +78,14 @@ test("legacy tasks without variation metadata keep prompts in order", async () =
   assert.deepEqual(data.template.promptLines, ["cat", "cat", "dog"]);
   restore();
 });
+
+
+test("template infers 1:1 from stored 512x512 size", async () => {
+  const restore = withTemplateMocks([
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { size: "512x512" }, metadata: {} }) }
+  ]);
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  const data = await res.json();
+  assert.equal(data.template.aspectRatio, "1:1");
+  restore();
+});

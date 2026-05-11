@@ -21,7 +21,6 @@ export function resolveFinalTaskSize(input: { model: string; aspectRatio?: strin
 
 export function inferAspectRatioFromSize(size?: string | null): string | null {
   const map: Record<string, string> = {
-    "1024x1024": "1:1",
     "1536x1024": "3:2",
     "1536x1152": "4:3",
     "1024x1536": "2:3",
@@ -31,5 +30,12 @@ export function inferAspectRatioFromSize(size?: string | null): string | null {
     "1024x1792": "9:16"
   };
   if (!size) return null;
-  return map[size] ?? null;
+  const trimmed = size.trim();
+  const match = /^(\d+)x(\d+)$/.exec(trimmed);
+  if (!match) return null;
+  const width = Number.parseInt(match[1], 10);
+  const height = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+  if (width === height) return "1:1";
+  return map[trimmed] ?? null;
 }
