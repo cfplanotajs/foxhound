@@ -55,3 +55,8 @@ export function normalizePresetDefaultParams(input: {
   out.quality = resolveEffectiveQuality({ provider: input.provider, model: input.model, requestedQuality: rawQuality });
   return out;
 }
+
+export function isPresetManageValidationError(error: unknown): error is Error {
+  if (!(error instanceof Error)) return false;
+  return /(required|valid JSON|must use only lowercase letters|Quality .+ is not supported for model .+\.)/.test(error.message);
+}

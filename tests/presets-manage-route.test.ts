@@ -202,7 +202,11 @@ test("create supports mock quality path", async () => {
 });
 
 
-test("duplicate validates newStableKey and newName", async () => {
+test("duplicate validates newStableKey and newName before source lookup", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  let lookupCalls = 0;
+  (prisma.preset as any).findUnique = async () => { lookupCalls += 1; return null; };
+
   const missingKey = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newName: "Copy" }) }));
   assert.equal(missingKey.status, 400);
   assert.equal((await missingKey.json()).error, "Preset stableKey is required.");
@@ -214,6 +218,8 @@ test("duplicate validates newStableKey and newName", async () => {
   const missingName = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newStableKey: "copy_key", newName: "   " }) }));
   assert.equal(missingName.status, 400);
   assert.equal((await missingName.json()).error, "Preset name is required.");
+  assert.equal(lookupCalls, 0);
+  (prisma.preset as any).findUnique = origFindUnique;
 });
 
 test("duplicate returns clear stableKey conflict error", async () => {
@@ -229,4 +235,22 @@ test("duplicate returns clear stableKey conflict error", async () => {
   assert.equal((await res.json()).error, "Preset stableKey already exists.");
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).create = origCreate;
+});
+
+
+test("edit rejects incompatible quality and creates no version", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origUpdate = prisma.preset.update;
+  let updated = false;
+  (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
+  (prisma.preset as any).update = async () => { updated = true; return {}; };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "dall-e-3", defaultParams: { quality: "high" } })
+  }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Quality high is not supported for model dall-e-3.");
+  assert.equal(updated, false);
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).update = origUpdate;
 });

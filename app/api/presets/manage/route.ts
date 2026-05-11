@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
-import { normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
+import { isPresetManageValidationError, normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
 
 export async function GET() {
   const rows = await prisma.preset.findMany({ include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } });
@@ -88,6 +88,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "duplicate") {
+      const newStableKey = validatePresetStableKey(body.newStableKey);
+      const newName = requiredText(body.newName, "Preset name is required.");
       const source = await prisma.preset.findUnique({ where: { stableKey: body.stableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
       if (!source || !source.versions[0]) return NextResponse.json({ error: "Preset not found" }, { status: 404 });
       const latest = source.versions[0];
@@ -101,8 +103,8 @@ export async function POST(request: Request) {
       });
       const created = await prisma.preset.create({
         data: {
-          stableKey: validatePresetStableKey(body.newStableKey),
-          name: requiredText(body.newName, "Preset name is required."),
+          stableKey: newStableKey,
+          name: newName,
           description: source.description,
           bestUseLabel: source.bestUseLabel,
           versions: {
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) return NextResponse.json({ error: error.message }, { status: 400 });
-    if (error instanceof Error && /(required|valid JSON|must use only lowercase letters)/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (isPresetManageValidationError(error)) return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && error.message.includes("Unique constraint failed") && error.message.includes("stableKey")) {
       return NextResponse.json({ error: "Preset stableKey already exists." }, { status: 400 });
     }
