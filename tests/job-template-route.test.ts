@@ -50,3 +50,31 @@ test("template does not invent 1:1 when ratio metadata is missing and size is un
   restore();
 });
 
+
+
+test("intentional duplicate lines are preserved while variation duplicates collapse", async () => {
+  const restore = withTemplateMocks([
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 1, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 2, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 1, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 3, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "dog", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 1, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "dog", constraints: null, requestPayloadJson: JSON.stringify({ metadata: { variationIndex: 2, variationCount: 4 }, providerPayload: { size: "1024x1024" } }) }
+  ]);
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  const data = await res.json();
+  assert.deepEqual(data.template.promptLines, ["cat", "cat", "dog"]);
+  restore();
+});
+
+test("legacy tasks without variation metadata keep prompts in order", async () => {
+  const restore = withTemplateMocks([
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { size: "1024x1024" } }) },
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "dog", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { size: "1024x1024" } }) }
+  ]);
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  const data = await res.json();
+  assert.deepEqual(data.template.promptLines, ["cat", "cat", "dog"]);
+  restore();
+});
