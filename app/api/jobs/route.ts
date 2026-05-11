@@ -115,6 +115,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+    if (error instanceof Error && error.message.startsWith("Quality ") && error.message.includes(" is not supported for model ")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof Error && error.message === "Preset default model is not supported by this app configuration.") return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && error.message === MISSING_OPENAI_KEY_MESSAGE) {
       return NextResponse.json({ error: error.message }, { status: 400 });
