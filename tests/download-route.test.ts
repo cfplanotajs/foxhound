@@ -56,3 +56,20 @@ test("download route returns zip when files exist", async () => {
   await fs.rm(dir, { recursive: true, force: true });
   (prisma.generationTask as any).findMany = orig;
 });
+
+
+test("download route returns safe 500 on unexpected filesystem error", async () => {
+  const origFindMany = prisma.generationTask.findMany;
+  const origStat = (fs as any).stat;
+  (prisma.generationTask as any).findMany = async () => [{ id: "t1", outputPath: "/tmp/protected.png" }];
+  (fs as any).stat = async () => { throw Object.assign(new Error("EACCES: permission denied, stat /tmp/protected.png"), { code: "EACCES" }); };
+
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(res.status, 500);
+  const data = await res.json();
+  assert.equal(data.error, "Unable to read one or more image files.");
+  assert.equal(String(JSON.stringify(data)).includes("/tmp/"), false);
+
+  (fs as any).stat = origStat;
+  (prisma.generationTask as any).findMany = origFindMany;
+});
