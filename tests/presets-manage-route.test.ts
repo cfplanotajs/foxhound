@@ -161,3 +161,72 @@ test("create returns clear error on stableKey conflict", async () => {
   assert.equal(data.error, "Preset stableKey already exists.");
   (prisma.preset as any).create = origCreate;
 });
+
+
+test("create normalizes compatible quality for dall-e-3", async () => {
+  const origCreate = prisma.preset.create;
+  let createdArgs: any = null;
+  (prisma.preset as any).create = async (args: any) => { createdArgs = args; return { id: "p3" }; };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "de3", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "dall-e-3", defaultParams: { quality: "standard" } })
+  }));
+  assert.equal(res.status, 200);
+  const params = JSON.parse(createdArgs.data.versions.create.defaultParamsJson);
+  assert.equal(params.quality, "standard");
+  (prisma.preset as any).create = origCreate;
+});
+
+test("create rejects incompatible quality for selected model", async () => {
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "badq", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "dall-e-3", defaultParams: { quality: "high" } })
+  }));
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "Quality high is not supported for model dall-e-3.");
+});
+
+test("create supports mock quality path", async () => {
+  const origCreate = prisma.preset.create;
+  let createdArgs: any = null;
+  (prisma.preset as any).create = async (args: any) => { createdArgs = args; return { id: "mock1" }; };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "mock_key", name: "Preset", stylePrompt: "Style", defaultProvider: "mock", defaultModel: "mock-v1", defaultParams: { quality: "high" } })
+  }));
+  assert.equal(res.status, 200);
+  const params = JSON.parse(createdArgs.data.versions.create.defaultParamsJson);
+  assert.equal(params.quality, "high");
+  (prisma.preset as any).create = origCreate;
+});
+
+
+test("duplicate validates newStableKey and newName", async () => {
+  const missingKey = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newName: "Copy" }) }));
+  assert.equal(missingKey.status, 400);
+  assert.equal((await missingKey.json()).error, "Preset stableKey is required.");
+
+  const invalidKey = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newStableKey: "Bad Key!", newName: "Copy" }) }));
+  assert.equal(invalidKey.status, 400);
+  assert.equal((await invalidKey.json()).error, "Preset stableKey must use only lowercase letters, numbers, hyphens, or underscores.");
+
+  const missingName = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newStableKey: "copy_key", newName: "   " }) }));
+  assert.equal(missingName.status, 400);
+  assert.equal((await missingName.json()).error, "Preset name is required.");
+});
+
+test("duplicate returns clear stableKey conflict error", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origCreate = prisma.preset.create;
+  (prisma.preset as any).findUnique = async () => ({
+    id: "src1", stableKey: "source", description: "desc", bestUseLabel: null,
+    versions: [{ version: "v1", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParamsJson: "{}", samplePrompt: null }]
+  });
+  (prisma.preset as any).create = async () => { throw new Error("Unique constraint failed on the fields: (`stableKey`)"); };
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "duplicate", stableKey: "source", newStableKey: "copy", newName: "Copy" }) }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Preset stableKey already exists.");
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).create = origCreate;
+});

@@ -1,5 +1,6 @@
 import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { assertSupportedProvider } from "@/lib/providers/supported";
+import { getQualityOptionsForModel, resolveEffectiveQuality } from "@/lib/providers/model-quality";
 
 const STABLE_KEY_PATTERN = /^[a-z0-9_-]+$/;
 
@@ -37,4 +38,20 @@ export function normalizePresetProviderModel(input: { defaultProvider: unknown; 
     throw new Error(`Unsupported OpenAI image model: ${defaultModel}`);
   }
   return { provider, defaultModel };
+}
+
+export function normalizePresetDefaultParams(input: {
+  provider: "openai" | "mock";
+  model: string;
+  defaultParams: Record<string, unknown>;
+}): Record<string, unknown> {
+  const out = { ...input.defaultParams };
+  const rawQuality = typeof out.quality === "string" ? out.quality.trim() : null;
+  if (!rawQuality) return out;
+
+  if (!getQualityOptionsForModel(input.provider, input.model).includes(rawQuality)) {
+    throw new Error(`Quality ${rawQuality} is not supported for model ${input.model}.`);
+  }
+  out.quality = resolveEffectiveQuality({ provider: input.provider, model: input.model, requestedQuality: rawQuality });
+  return out;
 }

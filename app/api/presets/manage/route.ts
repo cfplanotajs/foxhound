@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
-import { normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
+import { normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
 
 export async function GET() {
   const rows = await prisma.preset.findMany({ include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } });
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
       const name = requiredText(body.name, "Preset name is required.");
       const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
-      const defaultParams = parseDefaultParams(body.defaultParams);
+      const defaultParams = normalizePresetDefaultParams({ provider, model: defaultModel, defaultParams: parseDefaultParams(body.defaultParams) });
       const preset = await prisma.preset.create({
         data: {
           stableKey: validatePresetStableKey(body.stableKey),
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
       const name = requiredText(body.name, "Preset name is required.");
       const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
-      const defaultParams = parseDefaultParams(body.defaultParams);
+      const defaultParams = normalizePresetDefaultParams({ provider, model: defaultModel, defaultParams: parseDefaultParams(body.defaultParams) });
       const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
@@ -101,8 +101,8 @@ export async function POST(request: Request) {
       });
       const created = await prisma.preset.create({
         data: {
-          stableKey: body.newStableKey,
-          name: body.newName,
+          stableKey: validatePresetStableKey(body.newStableKey),
+          name: requiredText(body.newName, "Preset name is required."),
           description: source.description,
           bestUseLabel: source.bestUseLabel,
           versions: {

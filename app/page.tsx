@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
+import { getDefaultQualityForModel, getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
 import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
@@ -217,7 +217,7 @@ export default function DashboardPage() {
         stylePrompt: managerPrompt,
         defaultProvider: provider,
         defaultModel: model,
-        defaultParams: { size: "1024x1024", quality: "high", count: 1 },
+        defaultParams: { size: "1024x1024", quality: normalizeQualityForModel(provider as "openai" | "mock", model, quality) || getDefaultQualityForModel(provider as "openai" | "mock", model), count: 1 },
         samplePrompt: managerPrompt,
         contentHash: `${stableKey}-${Date.now()}`
       })
