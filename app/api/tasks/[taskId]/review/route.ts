@@ -3,13 +3,16 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { toClientTaskDto } from "@/lib/jobs/image-dto";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 
 const schema = z.object({ reviewStatus: z.enum(["unreviewed", "favorite", "approved", "rejected"]) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ taskId: string }> }) {
   try {
     const { taskId } = await params;
-    const parsed = schema.safeParse(await request.json());
+    const parsedBody = await parseJsonBody(request);
+    if (!parsedBody.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const parsed = schema.safeParse(parsedBody.data);
     if (!parsed.success) return NextResponse.json({ error: "Invalid review status." }, { status: 400 });
     const status = parsed.data.reviewStatus;
     const task = await prisma.generationTask.update({

@@ -9,6 +9,14 @@ test("review route rejects invalid status", async () => {
   assert.equal(res.status, 400);
 });
 
+
+
+test("review route returns 400 for malformed JSON body", async () => {
+  const res = await POST(new Request("http://x", { method: "POST", body: "{" }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "Malformed JSON request body.");
+});
 test("review route updates valid status", async () => {
   const orig = prisma.generationTask.update;
   let updateArgs: any = null;
