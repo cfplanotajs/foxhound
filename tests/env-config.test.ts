@@ -11,6 +11,27 @@ test("env loads without OPENAI_API_KEY for demo mode", () => {
   assert.equal(env.OPENAI_API_KEY, undefined);
 });
 
+test("OPENAI_IMAGE_MODEL blank string is treated as undefined", () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
+  process.env.OPENAI_IMAGE_MODEL = "";
+  __resetEnvCacheForTests();
+  assert.equal(getEnv().OPENAI_IMAGE_MODEL, undefined);
+});
+
+test("OPENAI_IMAGE_MODEL whitespace is treated as undefined", () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
+  process.env.OPENAI_IMAGE_MODEL = "   ";
+  __resetEnvCacheForTests();
+  assert.equal(getEnv().OPENAI_IMAGE_MODEL, undefined);
+});
+
+test("OPENAI_IMAGE_MODEL is trimmed when present", () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
+  process.env.OPENAI_IMAGE_MODEL = " gpt-image-2 ";
+  __resetEnvCacheForTests();
+  assert.equal(getEnv().OPENAI_IMAGE_MODEL, "gpt-image-2");
+});
+
 test("openai provider config assertion fails with friendly message", () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
   delete process.env.OPENAI_API_KEY;
@@ -23,6 +44,14 @@ test("mock provider config assertion does not require OPENAI_API_KEY", () => {
   delete process.env.OPENAI_API_KEY;
   __resetEnvCacheForTests();
   assert.doesNotThrow(() => assertProviderConfigured("mock"));
+});
+
+test("DATABASE_URL is required", () => {
+  const prev = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
+  __resetEnvCacheForTests();
+  assert.throws(() => getEnv());
+  process.env.DATABASE_URL = prev;
 });
 
 test("no client-side code references OPENAI_API_KEY", () => {

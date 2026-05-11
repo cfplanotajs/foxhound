@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import archiver from "archiver";
 import { PassThrough } from "node:stream";
 import { NextResponse } from "next/server";
@@ -9,12 +10,24 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
     const tasks = await prisma.generationTask.findMany({ where: { jobId, status: "completed" } });
     if (tasks.length === 0) return NextResponse.json({ error: "No completed images" }, { status: 400 });
 
+    for (const task of tasks) {
+      if (!task.outputPath) return NextResponse.json({ error: "One or more image files are missing." }, { status: 404 });
+      try {
+        await fs.stat(task.outputPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return NextResponse.json({ error: "One or more image files are missing." }, { status: 404 });
+        }
+        return NextResponse.json({ error: "Unable to read one or more image files." }, { status: 500 });
+      }
+    }
+
     const stream = new PassThrough();
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.on("error", (err) => stream.destroy(err));
     archive.pipe(stream);
     for (const task of tasks) {
-      if (task.outputPath) archive.file(task.outputPath, { name: `${task.id}.png` });
+      archive.file(task.outputPath as string, { name: `${task.id}.png` });
     }
     void archive.finalize();
 
@@ -24,7 +37,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
         "Content-Disposition": `attachment; filename=\"job-${jobId}.zip\"`
       }
     });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Unknown error" }, { status: 500 });
   }
 }

@@ -19,6 +19,15 @@ test("openai returns null when no model anywhere", () => {
   assert.equal(out.model, null);
 });
 
+
+
+test("blank OPENAI_IMAGE_MODEL is ignored for openai model resolution", () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
+  process.env.OPENAI_IMAGE_MODEL = "   ";
+  __resetEnvCacheForTests();
+  const out = resolveProviderAndModel({ providerFromBody: "openai", presetDefaultModel: "gpt-image-preset" });
+  assert.equal(out.model, "gpt-image-preset");
+});
 test("mock does not require OPENAI_IMAGE_MODEL", () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
   delete process.env.OPENAI_IMAGE_MODEL;
