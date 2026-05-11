@@ -13,7 +13,7 @@ import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
 import { assertSupportedOpenAIModel, listSupportedOpenAIModels } from "@/lib/providers/openai-models";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
-import { normalizeQualityForModel } from "@/lib/providers/model-quality";
+import { resolveEffectiveQuality } from "@/lib/providers/model-quality";
 import { resolveFinalTaskSize } from "@/lib/jobs/task-size";
 
 const MAX_PROMPT_LINES = 50;
@@ -43,11 +43,13 @@ export async function POST(request: Request) {
     });
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
-    const openaiSpec = provider === "openai" ? assertSupportedOpenAIModel(model) : null;
-    const normalizedQuality = normalizeQualityForModel(provider, model, body.quality ?? null);
-    if (openaiSpec && body.quality && !openaiSpec.allowedQualities.includes(body.quality as any)) {
-      return NextResponse.json({ error: `Quality ${body.quality} is not supported for model ${model}.` }, { status: 400 });
-    }
+    if (provider === "openai") assertSupportedOpenAIModel(model);
+    const normalizedQuality = resolveEffectiveQuality({
+      provider: provider as "openai" | "mock",
+      model,
+      requestedQuality: body.quality ?? null,
+      presetDefaultQuality: ((preset.defaultParams as { quality?: string } | null | undefined)?.quality ?? null) as string | null
+    });
     ensureJobProviderConfigured(provider);
 
     const lines = (body.bulkPrompts ?? "").split("\n").map((line) => line.trim()).filter(Boolean);

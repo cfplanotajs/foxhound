@@ -6,6 +6,13 @@ test("GPT image payload uses GPT-compatible quality and no response_format", () 
   const payload = buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 4, size: "1024x1024", quality: "high" });
   assert.equal("response_format" in payload, false);
   assert.equal(payload.n, 1);
+  assert.equal(payload.quality, "high");
+});
+
+test("GPT payload missing quality falls back safely and never emits undefined", () => {
+  const payload = buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 1, size: "1024x1024" });
+  assert.equal(payload.quality, "auto");
+  assert.equal(payload.quality === undefined, false);
 });
 
 test("dall-e-3 quality normalizes to standard/hd only", () => {

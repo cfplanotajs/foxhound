@@ -11,11 +11,13 @@ export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payloa
   const safeSize = spec.allowedSizes.includes(request.size ?? "") ? request.size : spec.allowedSizes[0];
 
   if (spec.family === "gpt-image") {
+    const requestedQuality = request.quality ?? null;
+    const safeQuality = requestedQuality && spec.allowedQualities.includes(requestedQuality as any) ? requestedQuality : (spec.allowedQualities.includes("auto") ? "auto" : spec.allowedQualities[0]);
     return {
       model: spec.id,
       prompt: request.prompt,
       size: safeSize,
-      quality: spec.allowedQualities.includes(request.quality ?? "low") ? request.quality : "high",
+      quality: safeQuality,
       n: safeCount
     };
   }
