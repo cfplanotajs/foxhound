@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
+import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -153,7 +154,9 @@ export default function DashboardPage() {
       return;
     }
     const tpl = templateData.template;
-    setSinglePrompt((tpl.promptLines ?? []).join("\n"));
+    const promptFields = splitTemplatePrompts(tpl.promptLines);
+    setSinglePrompt(promptFields.singlePrompt);
+    setBulkPrompts(promptFields.bulkPrompts);
     setProvider(tpl.provider);
     setModel(tpl.model);
     if (tpl.aspectRatio) { setAspectRatio(tpl.aspectRatio); setAspectRatioTouched(true); }

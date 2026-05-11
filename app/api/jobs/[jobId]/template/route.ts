@@ -17,7 +17,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
     (typeof metadata.aspectRatio === "string" && metadata.aspectRatio.length > 0 ? metadata.aspectRatio : null) ??
     (typeof providerPayload.aspectRatio === "string" && providerPayload.aspectRatio.length > 0 ? providerPayload.aspectRatio : null) ??
     inferAspectRatioFromSize(typeof size === "string" ? size : null);
-  const promptLines = Array.from(new Set(job.tasks.map((t: any) => t.subjectPrompt)));
+  const promptLines = job.tasks.flatMap((task: any) => {
+    const taskPayload = parseTaskPayload(task.requestPayloadJson);
+    const variationIndex = Number((taskPayload.metadata as any)?.variationIndex ?? 1);
+    return variationIndex > 1 ? [] : [task.subjectPrompt];
+  });
   return NextResponse.json({
     template: {
       jobId: job.id,
