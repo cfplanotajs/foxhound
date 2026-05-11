@@ -3,6 +3,44 @@ import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
 import { isPresetManageValidationError, normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
 
+
+async function createNextPresetVersionWithRetry(input: {
+  presetId: string;
+  stylePrompt: string;
+  provider: "openai" | "mock";
+  defaultModel: string;
+  defaultParams: Record<string, unknown>;
+  samplePrompt: string | null;
+  contentHash: string;
+}) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const latest = await prisma.presetVersion.findFirst({ where: { presetId: input.presetId }, orderBy: { createdAt: "desc" } });
+    const next = `v${((latest && Number(latest.version.replace(/^v/, ""))) || 0) + 1}`;
+    try {
+      const created = await prisma.presetVersion.create({
+        data: {
+          presetId: input.presetId,
+          version: next,
+          stylePrompt: input.stylePrompt,
+          defaultProvider: input.provider,
+          defaultModel: input.defaultModel,
+          defaultParamsJson: JSON.stringify(input.defaultParams),
+          samplePrompt: input.samplePrompt,
+          contentHash: input.contentHash
+        }
+      });
+      return { version: created.version };
+    } catch (error) {
+      const e = error as { code?: string };
+      if (e?.code !== "P2002") throw error;
+      const sameContent = await prisma.presetVersion.findUnique({ where: { presetId_contentHash: { presetId: input.presetId, contentHash: input.contentHash } } });
+      if (sameContent) return { version: sameContent.version, noChange: true as const };
+      if (attempt === 2) throw error;
+    }
+  }
+  throw new Error("Unable to create preset version.");
+}
+
 export async function GET() {
   const rows = await prisma.preset.findMany({ include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } }, orderBy: { updatedAt: "desc" } });
   const presets = rows.filter((r: any) => r.versions[0]).map((r: any) => ({
@@ -64,27 +102,18 @@ export async function POST(request: Request) {
       const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
-      const next = `v${((latest && Number(latest.version.replace(/^v/, ""))) || 0) + 1}`;
-      await prisma.preset.update({
-        where: { id: preset.id },
-        data: {
-          name,
-          description: body.description ?? "",
-          bestUseLabel: body.bestUseLabel ?? null,
-          versions: {
-            create: {
-              version: next,
-              stylePrompt,
-              defaultProvider: provider,
-              defaultModel,
-              defaultParamsJson: JSON.stringify(defaultParams),
-              samplePrompt: body.samplePrompt ?? null,
-              contentHash
-            }
-          }
-        }
+      await prisma.preset.update({ where: { id: preset.id }, data: { name, description: body.description ?? "", bestUseLabel: body.bestUseLabel ?? null } });
+      const versionResult = await createNextPresetVersionWithRetry({
+        presetId: preset.id,
+        stylePrompt,
+        provider,
+        defaultModel,
+        defaultParams,
+        samplePrompt: body.samplePrompt ?? null,
+        contentHash
       });
-      return NextResponse.json({ presetId: preset.id, version: next });
+      if (versionResult.noChange) return NextResponse.json({ presetId: preset.id, noChange: true });
+      return NextResponse.json({ presetId: preset.id, version: versionResult.version });
     }
 
     if (action === "duplicate") {

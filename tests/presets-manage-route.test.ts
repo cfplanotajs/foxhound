@@ -254,3 +254,50 @@ test("edit rejects incompatible quality and creates no version", async () => {
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
 });
+
+
+test("edit retries on version collision and succeeds", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origPresetUpdate = prisma.preset.update;
+  const origFindFirst = prisma.presetVersion.findFirst;
+  const origVersionCreate = prisma.presetVersion.create;
+  const origFindContent = prisma.presetVersion.findUnique;
+  let createCalls = 0;
+  (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
+  (prisma.preset as any).update = async () => ({});
+  (prisma.presetVersion as any).findFirst = async () => ({ version: createCalls === 0 ? "v1" : "v2" });
+  (prisma.presetVersion as any).findUnique = async () => null;
+  (prisma.presetVersion as any).create = async () => {
+    createCalls += 1;
+    if (createCalls === 1) throw Object.assign(new Error("collision"), { code: "P2002" });
+    return { version: "v3" };
+  };
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset", stylePrompt: "Style new", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} }) }));
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).version, "v3");
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).update = origPresetUpdate;
+  (prisma.presetVersion as any).findFirst = origFindFirst;
+  (prisma.presetVersion as any).create = origVersionCreate;
+  (prisma.presetVersion as any).findUnique = origFindContent;
+});
+
+test("edit returns 500 after repeated version collisions", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origPresetUpdate = prisma.preset.update;
+  const origFindFirst = prisma.presetVersion.findFirst;
+  const origVersionCreate = prisma.presetVersion.create;
+  const origFindContent = prisma.presetVersion.findUnique;
+  (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
+  (prisma.preset as any).update = async () => ({});
+  (prisma.presetVersion as any).findFirst = async () => ({ version: "v1" });
+  (prisma.presetVersion as any).findUnique = async () => null;
+  (prisma.presetVersion as any).create = async () => { throw Object.assign(new Error("collision"), { code: "P2002" }); };
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset", stylePrompt: "Style new", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} }) }));
+  assert.equal(res.status, 500);
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma.preset as any).update = origPresetUpdate;
+  (prisma.presetVersion as any).findFirst = origFindFirst;
+  (prisma.presetVersion as any).create = origVersionCreate;
+  (prisma.presetVersion as any).findUnique = origFindContent;
+});

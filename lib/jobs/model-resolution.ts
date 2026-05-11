@@ -12,7 +12,9 @@ export function resolveProviderAndModel(input: {
   const provider = providerFromBody ?? presetProvider ?? "openai";
 
   if (provider === "mock") {
-    return { provider, model: input.modelFromBody?.trim() || input.presetDefaultModel || "mock-v1" };
+    const bodyModel = input.modelFromBody?.trim() || "";
+    if (!bodyModel) return { provider, model: "mock-v1" };
+    return { provider, model: bodyModel === "mock-v1" ? "mock-v1" : "mock-v1" };
   }
 
   const envDefaultModel = getEnv().OPENAI_IMAGE_MODEL?.trim();

@@ -57,3 +57,14 @@ test("openai falls back to preset default model", () => {
 test("unsupported provider is rejected", () => {
   assert.throws(() => resolveProviderAndModel({ providerFromBody: "bad-provider", modelFromBody: "m" }), /Unsupported provider: bad-provider/);
 });
+
+
+test("mock ignores openai preset default model and resolves to mock-v1 when body model omitted", () => {
+  const out = resolveProviderAndModel({ providerFromBody: "mock", presetDefaultModel: "gpt-image-2" });
+  assert.equal(out.model, "mock-v1");
+});
+
+test("mock normalizes unsupported body model to mock-v1", () => {
+  const out = resolveProviderAndModel({ providerFromBody: "mock", modelFromBody: "gpt-image-2" });
+  assert.equal(out.model, "mock-v1");
+});
