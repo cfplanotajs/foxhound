@@ -10,6 +10,7 @@ import { HeroHeader } from "@/components/studio/HeroHeader";
 import { ReviewToolbar } from "@/components/studio/ReviewToolbar";
 import { CompareModal } from "@/components/studio/CompareModal";
 import { GalleryGrid } from "@/components/studio/GalleryGrid";
+import { EditPanel } from "@/components/studio/EditPanel";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -425,20 +426,7 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
-      {editSourceTask ? (
-        <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Edit Image</h2>
-          <p className="text-sm text-slate-600">Describe what to change. The source stays untouched. Foxhound creates a new edited result.</p>
-          {editSourceTask.imageUrl ? <img src={editSourceTask.imageUrl} alt="source" className="mt-3 h-48 w-48 rounded object-cover" /> : null}
-          {provider === "openai" ? <p className="mt-2 text-xs text-amber-700">OpenAI edit mode sends your completed source image plus instruction to the server-side OpenAI adapter. Demo Mode remains available for offline testing.</p> : null}
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            {["Clean up artifacts","White background","Match selected preset","More kid-friendly","Remove text","Cleaner sticker version"].map((chip) => <button key={chip} className="rounded-full border border-slate-300 bg-white px-3 py-1.5 font-medium" onClick={() => setEditInstruction((c) => appendEditChip(c, chip))}>{chip}</button>)}
-          </div>
-          <textarea value={editInstruction} onChange={(e) => setEditInstruction(e.target.value)} className="mt-3 min-h-24 w-full rounded border p-2" placeholder="Keep character and pose, make background white..." />
-          <textarea value={editConstraints} onChange={(e) => setEditConstraints(e.target.value)} className="mt-2 min-h-16 w-full rounded border p-2" placeholder="Optional constraints" />
-          <div className="mt-3 flex gap-2"><button className="rounded bg-indigo-600 px-3 py-2 text-white" disabled={editSubmitting} onClick={submitEdit}>{editSubmitting ? "Submitting..." : "Submit Edit"}</button><button className="rounded border px-3 py-2" onClick={() => setEditSourceTask(null)}>Close</button></div>
-        </section>
-      ) : null}
+      {editSourceTask ? <EditPanel editSourceTask={editSourceTask} provider={provider} editInstruction={editInstruction} editConstraints={editConstraints} editSubmitting={editSubmitting} onEditInstructionChange={setEditInstruction} onEditConstraintsChange={setEditConstraints} onAppendChip={(chip) => setEditInstruction((c) => appendEditChip(c, chip))} onSubmitEdit={submitEdit} onClose={() => setEditSourceTask(null)} /> : null}
       <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
     </div></main>
   );
