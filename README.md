@@ -101,3 +101,10 @@ npm run prisma:generate
 - OpenAI edit mode is intentionally not implemented in Stage 1 and returns a friendly message.
 - Stage 1 supports edit-from-existing-completed-output only.
 - No edit drawer UI yet (planned for Stage 2).
+
+## Edit Mode (Stage 2 UI)
+- Completed image cards now expose an Edit action.
+- Edit drawer supports source preview, instruction, quick chips, and submit to `/api/tasks/[taskId]/edit`.
+- Mock/Demo edit is fully demoable end-to-end.
+- Source image is never overwritten; edit always creates a new job.
+- OpenAI live edit adapter remains Stage 3.

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDefaultQualityForModel, getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
 import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
 import { applyJobTemplateToFormState } from "@/lib/jobs/template-form";
+import { appendEditChip, buildEditRequestPayload, canEditTask } from "@/lib/jobs/edit-ui";
 import { filterTasksByReview, getReviewStatusLabel, ReviewStatus } from "@/lib/review-ui";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
@@ -26,6 +27,10 @@ type JobTask = {
   aspectRatio?: string | null;
   size?: string | null;
   reviewStatus?: "unreviewed" | "favorite" | "approved" | "rejected";
+  mode?: "generate" | "edit";
+  sourceTaskId?: string | null;
+  sourceJobId?: string | null;
+  editInstruction?: string | null;
 };
 type RecentJob = { id: string; status: string; provider: string; model: string; createdAt: string; presetName: string | null; presetVersion: string | null; counts: { completed: number; failed: number; queued: number; processing: number } };
 type ProjectFolder = { id: string; name: string; isArchived: boolean };
@@ -73,6 +78,10 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
   const [folderId, setFolderId] = useState("");
+  const [editSourceTask, setEditSourceTask] = useState<JobTask | null>(null);
+  const [editInstruction, setEditInstruction] = useState("");
+  const [editConstraints, setEditConstraints] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -227,6 +236,26 @@ export default function DashboardPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
+  async function submitEdit() {
+    if (!editSourceTask) return;
+    if (!editInstruction.trim()) return setToast("Edit instruction is required.");
+    setEditSubmitting(true);
+    const payload = buildEditRequestPayload({ presetId, provider: provider as "openai" | "mock", model, editInstruction, constraints: editConstraints, aspectRatio, variationCount: variationCount as 1 | 2 | 4, quality: quality as any, projectId, folderId });
+    const res = await fetch(`/api/tasks/${editSourceTask.id}/edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) {
+      setToast(data.error ?? "Could not submit edit job.");
+      setEditSubmitting(false);
+      return;
+    }
+    setToast("Edit job submitted.");
+    setEditSubmitting(false);
+    setEditSourceTask(null);
+    setJobId(data.jobId);
+    await refreshJob(data.jobId);
+    await refreshImages(data.jobId);
+    void fetch("/api/jobs/recent").then((r) => r.json()).then((d) => setRecentJobs(d.jobs ?? []));
+  }
 
   async function createPresetFromManager() {
     const stableKey = managerName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -376,10 +405,12 @@ export default function DashboardPage() {
                   <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
                   <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
                   <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
+                  {task.mode === "edit" ? <p className="text-xs font-semibold text-indigo-700">Edit · {task.editInstruction?.slice(0, 64) ?? "Edited from previous image"}</p> : null}
                   {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
                   {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
                   <p className="text-xs text-slate-600">Review: {getReviewStatusLabel(task.reviewStatus)}</p>
                   <div className="mt-2 flex gap-1 text-xs">
+                    {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(task.editInstruction ?? ""); setEditConstraints(""); }}>Edit</button> : null}
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Favorite</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
@@ -421,6 +452,20 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+      {editSourceTask ? (
+        <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">Edit Image</h2>
+          <p className="text-sm text-slate-600">Describe what to change. The source image will stay untouched; Foxhound creates a new edit job.</p>
+          {editSourceTask.imageUrl ? <img src={editSourceTask.imageUrl} alt="source" className="mt-3 h-48 w-48 rounded object-cover" /> : null}
+          {provider === "openai" ? <p className="mt-2 text-xs text-amber-700">OpenAI edit mode is coming next. Use Demo Mode to test the edit workflow.</p> : null}
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {["Clean up artifacts","Make white background","Match selected preset","Make it more kid-friendly","Fix hands/fingers","Remove text","Create cleaner sticker version"].map((chip) => <button key={chip} className="rounded-full border px-2 py-1" onClick={() => setEditInstruction((c) => appendEditChip(c, chip))}>{chip}</button>)}
+          </div>
+          <textarea value={editInstruction} onChange={(e) => setEditInstruction(e.target.value)} className="mt-3 min-h-24 w-full rounded border p-2" placeholder="Keep character and pose, make background white..." />
+          <textarea value={editConstraints} onChange={(e) => setEditConstraints(e.target.value)} className="mt-2 min-h-16 w-full rounded border p-2" placeholder="Optional constraints" />
+          <div className="mt-3 flex gap-2"><button className="rounded bg-indigo-600 px-3 py-2 text-white" disabled={editSubmitting} onClick={submitEdit}>{editSubmitting ? "Submitting..." : "Submit Edit"}</button><button className="rounded border px-3 py-2" onClick={() => setEditSourceTask(null)}>Close</button></div>
+        </section>
+      ) : null}
     </main>
   );
 }
