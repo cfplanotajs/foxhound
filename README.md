@@ -24,6 +24,7 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
 3. Configure `.env`:
    - `DATABASE_URL` (required)
    - `OPENAI_API_KEY` (optional for Demo Mode, required for OpenAI mode)
+   - `OPENAI_IMAGE_MODEL` (optional override for default OpenAI image model)
 4. Initialize database and presets:
    ```bash
    npm run prisma:generate
