@@ -14,6 +14,7 @@ import { EditPanel } from "@/components/studio/EditPanel";
 import { RecentJobsPanel } from "@/components/studio/RecentJobsPanel";
 import { GenerationControls } from "@/components/studio/GenerationControls";
 import { PromptComposer } from "@/components/studio/PromptComposer";
+import { PresetManagerPanel } from "@/components/studio/PresetManagerPanel";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -337,25 +338,7 @@ export default function DashboardPage() {
       </section>
 
       
-      {showManager ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Preset Manager</h2>
-          <p className="text-sm text-slate-600">Create presets and versions without editing JSON.</p>
-          <div className="mt-3 grid gap-2">
-            <input value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Preset name" className="rounded border p-2" />
-            <textarea value={managerPrompt} onChange={(e) => setManagerPrompt(e.target.value)} placeholder="Style prompt" className="rounded border p-2 min-h-20" />
-            <button type="button" className="rounded bg-blue-600 px-3 py-2 text-white" onClick={createPresetFromManager}>Create Preset</button>
-          </div>
-          <div className="mt-4 space-y-3">
-            {managerError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{managerError}</p> : null}
-            <h3 className="font-medium">Active Presets</h3>
-            {managerLoading ? <p className="text-sm text-slate-500">Loading presets...</p> : null}
-            {!managerLoading && managerPresets.active.length === 0 ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">No active presets.</p> : null}
-            <div className="mt-2 grid gap-2">{managerPresets.active.map((p) => <div key={p.stableKey} className="rounded-xl border p-3 text-sm flex items-center justify-between"><span>{p.name} <span className="text-slate-500">({p.version})</span></span><button className="rounded bg-amber-100 px-3 py-1 font-medium text-amber-800 hover:bg-amber-200" onClick={() => setPresetArchived(p.stableKey, true)}>Archive</button></div>)}</div>
-            <details className="mt-3"><summary className="cursor-pointer text-sm font-medium">Archived presets</summary>{!managerLoading && managerPresets.archived.length === 0 ? <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">No archived presets.</p> : null}<div className="mt-2 grid gap-2">{managerPresets.archived.map((p) => <div key={p.stableKey} className="rounded-xl border p-3 text-sm flex items-center justify-between"><span>{p.name} <span className="text-slate-500">({p.version})</span></span><button className="rounded bg-emerald-100 px-3 py-1 font-medium text-emerald-800 hover:bg-emerald-200" onClick={() => setPresetArchived(p.stableKey, false)}>Unarchive</button></div>)}</div></details>
-          </div>
-        </section>
-      ) : null}
+      {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
       {jobId && (
         <section className="rounded-2xl bg-white p-5 shadow-sm">
