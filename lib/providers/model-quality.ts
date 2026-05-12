@@ -39,3 +39,13 @@ export function resolveEffectiveQuality(input: {
   }
   return getDefaultQualityForModel(input.provider, input.model);
 }
+
+export function getCompatiblePresetDefaultQuality(input: {
+  provider: "openai" | "mock";
+  model: string;
+  presetDefaultQuality?: string | null;
+}): string | null {
+  const presetDefault = input.presetDefaultQuality?.trim() || null;
+  if (!presetDefault) return null;
+  return getQualityOptionsForModel(input.provider, input.model).includes(presetDefault) ? presetDefault : null;
+}

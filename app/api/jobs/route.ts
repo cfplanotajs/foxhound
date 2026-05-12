@@ -13,7 +13,7 @@ import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { parseJsonBody } from "@/lib/jobs/json-body";
 import { assertSupportedOpenAIModel, listSupportedOpenAIModels } from "@/lib/providers/openai-models";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
-import { resolveEffectiveQuality } from "@/lib/providers/model-quality";
+import { getCompatiblePresetDefaultQuality, resolveEffectiveQuality } from "@/lib/providers/model-quality";
 import { resolveFinalTaskSize } from "@/lib/jobs/task-size";
 
 const MAX_PROMPT_LINES = 50;
@@ -57,11 +57,16 @@ export async function POST(request: Request) {
     if (!provider) return NextResponse.json({ error: "Provider is required." }, { status: 400 });
     if (!model) return NextResponse.json({ error: "Model is required." }, { status: 400 });
     if (provider === "openai") assertSupportedOpenAIModel(model);
+    const presetDefaultQuality = ((preset.defaultParams as { quality?: string } | null | undefined)?.quality ?? null) as string | null;
+    const usePresetDefaultQuality =
+      preset.defaultProvider === provider && preset.defaultModel === model
+        ? presetDefaultQuality
+        : getCompatiblePresetDefaultQuality({ provider: provider as "openai" | "mock", model, presetDefaultQuality });
     const normalizedQuality = resolveEffectiveQuality({
       provider: provider as "openai" | "mock",
       model,
       requestedQuality: body.quality ?? null,
-      presetDefaultQuality: ((preset.defaultParams as { quality?: string } | null | undefined)?.quality ?? null) as string | null
+      presetDefaultQuality: usePresetDefaultQuality
     });
     ensureJobProviderConfigured(provider);
 

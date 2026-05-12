@@ -204,6 +204,15 @@ test("create supports mock quality path", async () => {
   (prisma.preset as any).create = origCreate;
 });
 
+test("create rejects incompatible default size for selected model", async () => {
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "badsize", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "dall-e-3", defaultParams: { size: "1536x1024" } })
+  }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Size 1536x1024 is not supported by model dall-e-3.");
+});
+
 
 test("duplicate validates newStableKey and newName before source lookup", async () => {
   const origFindUnique = prisma.preset.findUnique;
@@ -257,6 +266,23 @@ test("edit rejects incompatible quality and creates no version", async () => {
   assert.equal(updated, false);
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
+  (prisma as any).$transaction = origTransaction;
+});
+
+test("edit rejects incompatible default size and creates no version", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  let updated = false;
+  (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
+  const origTransaction = prisma.$transaction;
+  (prisma as any).$transaction = async () => { updated = true; };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "dall-e-3", defaultParams: { size: "1536x1024" } })
+  }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Size 1536x1024 is not supported by model dall-e-3.");
+  assert.equal(updated, false);
+  (prisma.preset as any).findUnique = origFindUnique;
   (prisma as any).$transaction = origTransaction;
 });
 

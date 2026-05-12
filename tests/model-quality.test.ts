@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getQualityOptionsForModel, normalizeQualityForModel, resolveEffectiveQuality } from "../lib/providers/model-quality.ts";
+import { getCompatiblePresetDefaultQuality, getQualityOptionsForModel, normalizeQualityForModel, resolveEffectiveQuality } from "../lib/providers/model-quality.ts";
 
 test("dall-e-2 uses standard quality", () => {
   assert.deepEqual(getQualityOptionsForModel("openai", "dall-e-2"), ["standard"]);
@@ -28,4 +28,9 @@ test("invalid preset default quality fails clearly", () => {
 test("mock quality path remains harmless", () => {
   assert.deepEqual(getQualityOptionsForModel("mock", "mock-v1"), ["high"]);
   assert.equal(resolveEffectiveQuality({ provider: "mock", model: "mock-v1" }), "high");
+});
+
+test("incompatible inherited preset default can be skipped safely", () => {
+  assert.equal(getCompatiblePresetDefaultQuality({ provider: "mock", model: "mock-v1", presetDefaultQuality: "auto" }), null);
+  assert.equal(resolveEffectiveQuality({ provider: "mock", model: "mock-v1", presetDefaultQuality: null }), "high");
 });
