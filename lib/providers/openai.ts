@@ -71,6 +71,9 @@ export class OpenAIProvider implements ImageProvider {
   }
 
   async generateImage(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
+    if (request.mode === "edit") {
+      throw new Error("OpenAI edit mode is not implemented yet. Use Demo Mode for edit workflow testing.");
+    }
     const payload = buildOpenAIImagePayload(request);
     const response = await this.client.images.generate(payload as never);
     const bytes = await decodeOpenAIImage(response);

@@ -1,6 +1,7 @@
 export type ProviderName = "openai" | "mock";
 
 export interface NormalizedImageRequest {
+  mode?: "generate" | "edit";
   provider: ProviderName;
   model: string;
   prompt: string;
@@ -8,6 +9,10 @@ export interface NormalizedImageRequest {
   quality?: "low" | "medium" | "high" | "auto" | "standard" | "hd";
   count?: number;
   presetName?: string;
+  sourceTaskId?: string;
+  sourceJobId?: string;
+  sourceImagePath?: string;
+  editInstruction?: string;
 }
 
 export interface NormalizedImageResult {

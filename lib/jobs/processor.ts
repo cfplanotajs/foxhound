@@ -142,11 +142,15 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
 
     try {
       const providerRequest = buildProviderRequest({
+        mode: (queued as any).mode ?? "generate",
         provider: queued.provider as "openai" | "mock",
         model: task.model,
         prompt: task.finalPrompt,
         params: extractTaskParams(task.requestPayloadJson),
-        presetName: task.presetName
+        presetName: task.presetName,
+        sourceTaskId: (queued as any).sourceTaskId ?? undefined,
+        sourceJobId: (queued as any).sourceJobId ?? undefined,
+        editInstruction: (queued as any).editInstruction ?? undefined
       });
       await prisma.generationTask.update({
         where: { id: task.id },

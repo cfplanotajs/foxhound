@@ -38,6 +38,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
       variationCount: metadata.variationCount ?? providerPayload.variationCount ?? 1,
       constraints: first.constraints ?? null,
       status: job.status
+      ,mode: job.mode ?? "generate"
+      ,sourceTaskId: job.sourceTaskId ?? null
+      ,sourceJobId: job.sourceJobId ?? null
+      ,editInstruction: job.editInstruction ?? null
       ,projectId: job.projectId ?? null
       ,folderId: job.folderId ?? null
       ,projectName: job.project?.name ?? null

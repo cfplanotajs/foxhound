@@ -93,3 +93,11 @@ Run:
 npm run prisma:generate
 # then apply the new migration in your normal Prisma workflow
 ```
+
+## Edit Mode (Stage 1 server core)
+- Added server-side edit job foundation via `POST /api/tasks/[taskId]/edit`.
+- Edit jobs are linked to source lineage (`mode=edit`, `sourceJobId`, `sourceTaskId`, `editInstruction`).
+- Demo/Mock provider supports edit-mode processing end-to-end.
+- OpenAI edit mode is intentionally not implemented in Stage 1 and returns a friendly message.
+- Stage 1 supports edit-from-existing-completed-output only.
+- No edit drawer UI yet (planned for Stage 2).

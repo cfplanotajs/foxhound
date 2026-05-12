@@ -53,7 +53,11 @@ export class MockProvider implements ImageProvider {
       images: [{ bytes, mimeType: "image/png" }],
       providerMetadata: {
         kind: "mock",
+        mode: request.mode ?? "generate",
         banner: "MOCK GENERATED IMAGE",
+        editInstruction: request.editInstruction ?? null,
+        sourceTaskId: request.sourceTaskId ?? null,
+        sourceJobId: request.sourceJobId ?? null,
         presetName: request.presetName ?? null,
         promptSnippet: request.prompt.slice(0, 100),
         upstreamPayload: { ...request }

@@ -63,6 +63,11 @@ export function buildProviderRequest(input: {
   prompt: string;
   params?: StoredTaskParams;
   presetName?: string;
+  mode?: "generate" | "edit";
+  sourceTaskId?: string;
+  sourceJobId?: string;
+  sourceImagePath?: string;
+  editInstruction?: string;
 }) {
   const params = input.params ?? {};
   // MVP invariant: one task = one generated image.
@@ -75,7 +80,12 @@ export function buildProviderRequest(input: {
     size: params.size ?? "1024x1024",
     quality: params.quality ?? "high",
     count: safeCount,
-    ...(input.presetName ? { presetName: input.presetName } : {})
+    ...(input.presetName ? { presetName: input.presetName } : {}),
+    ...(input.mode ? { mode: input.mode } : {}),
+    ...(input.sourceTaskId ? { sourceTaskId: input.sourceTaskId } : {}),
+    ...(input.sourceJobId ? { sourceJobId: input.sourceJobId } : {}),
+    ...(input.sourceImagePath ? { sourceImagePath: input.sourceImagePath } : {}),
+    ...(input.editInstruction ? { editInstruction: input.editInstruction } : {})
   } as const;
 }
 

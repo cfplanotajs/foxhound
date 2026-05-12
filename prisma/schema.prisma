@@ -28,6 +28,10 @@ enum ReviewStatus {
   approved
   rejected
 }
+enum JobMode {
+  generate
+  edit
+}
 
 model Preset {
   id          String          @id @default(cuid())
@@ -61,8 +65,12 @@ model PresetVersion {
 model GenerationJob {
   id             String           @id @default(cuid())
   status         JobStatus        @default(queued)
+  mode           JobMode          @default(generate)
   provider       String
   model          String
+  sourceJobId    String?
+  sourceTaskId   String?
+  editInstruction String?
   idempotencyKey String?          @unique
   createdAt      DateTime         @default(now())
   startedAt      DateTime?

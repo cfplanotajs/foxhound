@@ -18,6 +18,7 @@ export async function GET(request: Request) {
       return {
         id: job.id,
         status: job.status,
+        mode: job.mode ?? "generate",
         provider: job.provider,
         model: job.model,
         createdAt: job.createdAt,
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
         folderId: job.folderId ?? null,
         projectName: job.project?.name ?? null,
         folderName: job.folder?.name ?? null,
+        sourceTaskId: job.sourceTaskId ?? null,
         counts: {
           completed: tasks.filter((t: any) => t.status === "completed").length,
           failed: tasks.filter((t: any) => t.status === "failed").length,
