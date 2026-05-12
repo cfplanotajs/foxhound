@@ -6,6 +6,9 @@ import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
 import { applyJobTemplateToFormState } from "@/lib/jobs/template-form";
 import { appendEditChip, buildEditRequestPayload, canEditTask } from "@/lib/jobs/edit-ui";
 import { filterTasksByReview, getReviewStatusLabel, ReviewStatus } from "@/lib/review-ui";
+import { HeroHeader } from "@/components/studio/HeroHeader";
+import { ReviewToolbar } from "@/components/studio/ReviewToolbar";
+import { CompareModal } from "@/components/studio/CompareModal";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -320,20 +323,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
-      <div className="mx-auto max-w-7xl space-y-6 p-6"><header className="rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-sm backdrop-blur">
-        <h1 className="text-3xl font-bold text-slate-900">Foxhound Studio Console</h1>
-        <p className="mt-2 text-slate-600">Create, edit, review, and export studio-ready AI visuals.</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-          <span className={`rounded-full px-3 py-1 ${provider === "mock" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>Demo Mode</span>
-          <span className={`rounded-full px-3 py-1 ${provider === "openai" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-500"}`}>OpenAI</span>
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Worker Queue</span>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
-          {["Select Preset", "Write Prompt", "Worker Generates", "Review & Download"].map((step) => (
-            <div key={step} className="rounded-xl bg-slate-100 px-3 py-2 text-slate-700">{step}</div>
-          ))}
-        </div>
-      <div className="mt-4"><button className="rounded-xl bg-slate-800 px-4 py-2 text-white" onClick={() => setShowManager((v) => !v)}>{showManager ? "Hide Preset Manager" : "Manage Presets"}</button></div></header>
+      <div className="mx-auto max-w-7xl space-y-6 p-6"><HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} />
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -411,8 +401,7 @@ export default function DashboardPage() {
               <button className="rounded bg-emerald-900 px-3 py-2 text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
             </div>
           </div>
-          <p className="mt-2 text-xs text-slate-600">Approved = ready to use · Favorite = promising · Rejected = not useful</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">{(["all","favorite","approved","rejected"] as const).map((f) => <button key={f} className={`rounded-full px-3 py-1 border ${reviewFilter===f?"bg-slate-900 text-white border-slate-900":"bg-white text-slate-700 border-slate-300"}`} onClick={() => setReviewFilter(f)}>{f === "all" ? "All" : f === "favorite" ? "Favorites" : f === "approved" ? "Approved" : "Rejected"}</button>)}</div>{reviewError ? <p className="mt-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{reviewError}</p> : null}<div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /><div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {filteredTasks.map((task) => {
               const providerError = task.providerError;
               const sourceTask = task.sourceTaskId ? tasks.find((x) => x.id === task.sourceTaskId) : null;
@@ -491,18 +480,7 @@ export default function DashboardPage() {
           <div className="mt-3 flex gap-2"><button className="rounded bg-indigo-600 px-3 py-2 text-white" disabled={editSubmitting} onClick={submitEdit}>{editSubmitting ? "Submitting..." : "Submit Edit"}</button><button className="rounded border px-3 py-2" onClick={() => setEditSourceTask(null)}>Close</button></div>
         </section>
       ) : null}
-      {compareTask && compareTask.sourceTaskId ? (
-        <section className="fixed inset-0 z-20 bg-slate-900/60 p-6">
-          <div className="mx-auto max-w-5xl rounded-2xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-semibold">Compare: Source vs Edit</h3><button className="rounded border px-3 py-1" onClick={() => setCompareTask(null)}>Close</button></div>
-            <p className="mb-3 text-sm text-slate-600">{compareTask.editInstruction ?? "Edited result comparison"}</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <img src={tasks.find((t) => t.id === compareTask.sourceTaskId)?.imageUrl ?? ""} alt="source compare" className="h-72 w-full rounded-xl border object-cover" />
-              <img src={compareTask.imageUrl ?? ""} alt="edited compare" className="h-72 w-full rounded-xl border object-cover" />
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
     </div></main>
   );
 }
