@@ -1,6 +1,17 @@
 import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { assertSupportedProvider } from "@/lib/providers/supported";
 import { getQualityOptionsForModel, resolveEffectiveQuality } from "@/lib/providers/model-quality";
+import { getOpenAIModelSpec } from "@/lib/providers/openai-models";
+
+
+
+function validatePresetDefaultSize(input: { provider: "openai" | "mock"; model: string; size: string }) {
+  if (input.provider === "mock") return;
+  const spec = getOpenAIModelSpec(input.model);
+  if (!spec || !spec.allowedSizes.includes(input.size)) {
+    throw new Error(`Size ${input.size} is not supported by model ${input.model}.`);
+  }
+}
 
 const STABLE_KEY_PATTERN = /^[a-z0-9_-]+$/;
 
@@ -46,6 +57,12 @@ export function normalizePresetDefaultParams(input: {
   defaultParams: Record<string, unknown>;
 }): Record<string, unknown> {
   const out = { ...input.defaultParams };
+  const rawSize = typeof out.size === "string" ? out.size.trim() : null;
+  if (rawSize) {
+    validatePresetDefaultSize({ provider: input.provider, model: input.model, size: rawSize });
+    out.size = rawSize;
+  }
+
   const rawQuality = typeof out.quality === "string" ? out.quality.trim() : null;
   if (!rawQuality) return out;
 
@@ -58,5 +75,5 @@ export function normalizePresetDefaultParams(input: {
 
 export function isPresetManageValidationError(error: unknown): error is Error {
   if (!(error instanceof Error)) return false;
-  return /(required|valid JSON|must use only lowercase letters|Quality .+ is not supported for model .+\.)/.test(error.message);
+  return /(required|valid JSON|must use only lowercase letters|Quality .+ is not supported for model .+\.|Size .+ is not supported by model .+\.)/.test(error.message);
 }
