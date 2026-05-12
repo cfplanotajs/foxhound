@@ -12,6 +12,7 @@ import { CompareModal } from "@/components/studio/CompareModal";
 import { GalleryGrid } from "@/components/studio/GalleryGrid";
 import { EditPanel } from "@/components/studio/EditPanel";
 import { RecentJobsPanel } from "@/components/studio/RecentJobsPanel";
+import { GenerationControls } from "@/components/studio/GenerationControls";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -329,32 +330,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl space-y-6 p-6"><HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} />
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Preset & Model</h2>
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">Preset</span>
-            <select value={presetId} onChange={(e) => setPresetId(e.target.value)} className="rounded border p-2">
-              <option value="">Select preset</option>
-              {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name} ({preset.version})</option>)}
-            </select>
-          </label>
-          {selectedPreset ? (
-            <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-              <p><strong>{selectedPreset.name}</strong> — {selectedPreset.description}</p>
-              <p className="mt-1">Model: {selectedPreset.defaultModel} | Size: {String(selectedPreset.defaultParams?.size ?? "1024x1024")} | Quality: {String(selectedPreset.defaultParams?.quality ?? "high")}</p>
-            </div>
-          ) : null}
-
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="grid gap-1 text-sm"><span className="font-medium">Provider</span><div className="inline-flex rounded-xl border border-slate-300 bg-slate-100 p-1"><button type="button" onClick={() => setProvider("mock")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${provider==="mock"?"bg-white text-slate-900 shadow":"text-slate-600"}`}>Demo Mode</button><button type="button" onClick={() => setProvider("openai")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${provider==="openai"?"bg-white text-slate-900 shadow":"text-slate-600"}`}>OpenAI</button></div></div>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Model</span>{provider === "mock" ? <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="mock-v1">mock-v1</option></select> : <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="gpt-image-2">gpt-image-2</option><option value="gpt-image-1">gpt-image-1</option><option value="dall-e-3">dall-e-3</option><option value="dall-e-2">dall-e-2</option></select>}</label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => { setAspectRatio(e.target.value); setAspectRatioTouched(true); }} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="rounded border p-2">{getQualityOptionsForModel(provider as "openai" | "mock", model).map((q) => <option key={q} value={q}>{q}</option>)}</select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Project</span><select value={projectId} onChange={(e) => { setProjectId(e.target.value); setFolderId(""); }} className="rounded border p-2"><option value="">Unassigned</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-            <label className="grid gap-1 text-sm"><span className="font-medium">Folder</span><select value={folderId} onChange={(e) => setFolderId(e.target.value)} className="rounded border p-2" disabled={!projectId}><option value="">Unassigned</option>{(projects.find((p) => p.id === projectId)?.folders ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
-          </div>
-        </div>
+        <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{presets.map((p) => <button key={p.id} type="button" className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium hover:bg-slate-200" onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>{p.samplePrompt ? `${p.name} sample` : `Use ${p.name}`}</button>)}</div>
