@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "test": "node --import=tsx --test tests/**/*.test.ts",
     "worker": "tsx scripts/worker.ts",
-    "presets:seed": "tsx scripts/seed-presets.ts"
+    "presets:seed": "tsx scripts/seed-presets.ts",
+    "verify": "npm run prisma:generate && npm test && npm run lint && npm run build && npm run typecheck"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

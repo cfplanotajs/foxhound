@@ -120,3 +120,6 @@ npm run prisma:generate
 ## Verification note for Next.js route types
 - In this Next 15.2 setup, `npm run typecheck` expects `.next/types` files.
 - Run `npm run build` once before standalone `npm run typecheck` in a clean workspace.
+- `next typegen` is not available as a stable CLI command in this project setup, so use:
+  - `npm run verify`
+  - or `npm run prisma:generate && npm test && npm run lint && npm run build && npm run typecheck`

@@ -100,12 +100,15 @@ test("edit route rejects mismatched project/folder", async () => {
 test("edit route returns friendly 400 when openai key missing", async () => {
   const restore = setupEditableSource();
   const prev = process.env.OPENAI_API_KEY;
+  const prevDb = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = prevDb ?? "file:./test.db";
   delete process.env.OPENAI_API_KEY;
   __resetEnvCacheForTests();
   const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", provider: "openai", model: "gpt-image-2", editInstruction: "white bg" }) }), { params: Promise.resolve({ taskId: "t1" }) });
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /OpenAI API key is missing/);
   if (prev) process.env.OPENAI_API_KEY = prev;
+  if (prevDb) process.env.DATABASE_URL = prevDb;
   __resetEnvCacheForTests();
   restore();
 });

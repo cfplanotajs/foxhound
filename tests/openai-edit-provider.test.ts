@@ -4,9 +4,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { OpenAIProvider } from "../lib/providers/openai.ts";
+import { __resetEnvCacheForTests } from "../lib/env.ts";
 
 test("openai edit reads source image and calls images.edit", async () => {
   process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  __resetEnvCacheForTests();
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "foxhound-"));
   const source = path.join(dir, "source.png");
   await fs.writeFile(source, Buffer.from("pngbytes"));
@@ -31,6 +34,8 @@ test("openai edit reads source image and calls images.edit", async () => {
 
 test("openai edit rejects unsupported model", async () => {
   process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  __resetEnvCacheForTests();
   const provider = new OpenAIProvider();
   await assert.rejects(
     () => provider.generateImage({ provider: "openai", mode: "edit", model: "dall-e-3", prompt: "edit", sourceImagePath: "/tmp/x.png" }),
