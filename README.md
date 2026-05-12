@@ -116,3 +116,7 @@ npm run prisma:generate
 - No mask/canvas controls yet.
 - No multi-source reference editing.
 - No conversational multi-turn edit workflow.
+
+## Verification note for Next.js route types
+- In this Next 15.2 setup, `npm run typecheck` expects `.next/types` files.
+- Run `npm run build` once before standalone `npm run typecheck` in a clean workspace.

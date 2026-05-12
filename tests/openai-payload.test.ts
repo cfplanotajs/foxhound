@@ -34,6 +34,10 @@ test("unsupported model rejects clearly", () => {
   assert.throws(() => buildOpenAIImagePayload({ provider: "openai", model: "weird-model", prompt: "cat", count: 1 }), /Unsupported OpenAI image model/);
 });
 
+test("unsupported model-size combination rejects clearly", () => {
+  assert.throws(() => buildOpenAIImagePayload({ provider: "openai", model: "dall-e-3", prompt: "cat", count: 1, size: "1536x1024" }), /is not supported by model/);
+});
+
 test("GPT response parses b64_json correctly", async () => {
   const bytes = await decodeOpenAIImage({ data: [{ b64_json: Buffer.from("hello").toString("base64") }] } as never);
   assert.equal(bytes.toString("utf8"), "hello");

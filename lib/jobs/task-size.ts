@@ -1,11 +1,9 @@
 import { resolveSizeForModel } from "@/lib/providers/image-size-presets";
-import { getOpenAIModelSpec } from "@/lib/providers/openai-models";
+import { isSizeSupportedForOpenAIModel } from "@/lib/providers/openai-models";
 
 function isSizeSupportedByModel(model: string, size: string): boolean {
   if (model.startsWith("mock")) return true;
-  const spec = getOpenAIModelSpec(model);
-  if (!spec) return false;
-  return spec.allowedSizes.includes(size);
+  return isSizeSupportedForOpenAIModel(model, size);
 }
 
 export function resolveFinalTaskSize(input: { model: string; aspectRatio?: string; presetDefaultSize?: string | null }) {

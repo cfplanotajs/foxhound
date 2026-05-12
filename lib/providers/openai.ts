@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getOpenAIConfig } from "@/lib/env";
-import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
+import { assertSupportedOpenAIModel, isSizeSupportedForOpenAIModel } from "@/lib/providers/openai-models";
 import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/lib/providers/types";
 
 type Payload = Record<string, unknown>;
@@ -10,7 +10,11 @@ type Payload = Record<string, unknown>;
 export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payload {
   const safeCount = 1;
   const spec = assertSupportedOpenAIModel(request.model);
-  const safeSize = spec.allowedSizes.includes(request.size ?? "") ? request.size : spec.allowedSizes[0];
+  const requestedSize = request.size ?? spec.allowedSizes[0];
+  if (!isSizeSupportedForOpenAIModel(spec.id, requestedSize)) {
+    throw new Error(`Size ${requestedSize} is not supported by model ${spec.id}`);
+  }
+  const safeSize = requestedSize;
 
   if (spec.family === "gpt-image") {
     const requestedQuality = request.quality ?? null;

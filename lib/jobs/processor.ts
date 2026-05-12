@@ -171,6 +171,9 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
           status: "completed",
           outputPath,
           responseMetadataJson: JSON.stringify(result.providerMetadata),
+          errorMessage: null,
+          lastError: null,
+          nextAttemptAt: null,
           completedAt: new Date()
         }
       });
