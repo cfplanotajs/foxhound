@@ -13,6 +13,7 @@ import { GalleryGrid } from "@/components/studio/GalleryGrid";
 import { EditPanel } from "@/components/studio/EditPanel";
 import { RecentJobsPanel } from "@/components/studio/RecentJobsPanel";
 import { GenerationControls } from "@/components/studio/GenerationControls";
+import { PromptComposer } from "@/components/studio/PromptComposer";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -332,15 +333,7 @@ export default function DashboardPage() {
       <section className="grid gap-6 lg:grid-cols-2">
         <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Prompt</h2><div className="mb-2 flex flex-wrap gap-2">{presets.map((p) => <button key={p.id} type="button" className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium hover:bg-slate-200" onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>{p.samplePrompt ? `${p.name} sample` : `Use ${p.name}`}</button>)}</div>
-          {error ? <p className="mb-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{error}</p> : null}
-          <label className="grid gap-1 text-sm"><span className="font-medium">Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePrompt(e.target.value)} className="min-h-20 rounded border p-2" /></label>
-          <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-24 rounded border p-2" /></label>
-          <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Production Constraints (optional)</span><textarea value={constraints} onChange={(e) => setConstraints(e.target.value)} className="min-h-16 rounded border p-2" /></label>
-          <p className="mt-2 text-xs text-slate-500">Submit is enabled when preset, provider, model, and at least one prompt line are present.</p>
-          <button disabled={loading || !formValid} className="mt-3 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={submitJob}>{loading ? "Generating..." : "Generate Images"}</button>
-        </div>
+        <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
       </section>
 
       
