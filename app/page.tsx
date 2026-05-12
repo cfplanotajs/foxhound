@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDefaultQualityForModel, getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
 import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
+import { applyJobTemplateToFormState } from "@/lib/jobs/template-form";
 import { filterTasksByReview, getReviewStatusLabel, ReviewStatus } from "@/lib/review-ui";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
@@ -167,13 +168,16 @@ export default function DashboardPage() {
     }
     const tpl = templateData.template;
     const promptFields = splitTemplatePrompts(tpl.promptLines);
+    const appliedTemplate = applyJobTemplateToFormState(tpl);
     setSinglePrompt(promptFields.singlePrompt);
     setBulkPrompts(promptFields.bulkPrompts);
-    setProvider(tpl.provider);
-    setModel(tpl.model);
-    if (tpl.aspectRatio) { setAspectRatio(tpl.aspectRatio); setAspectRatioTouched(true); }
-    if (tpl.variationCount) setVariationCount(tpl.variationCount);
-    if (tpl.quality) setQuality(tpl.quality);
+    setProvider(appliedTemplate.provider);
+    setModel(appliedTemplate.model);
+    setAspectRatio(appliedTemplate.aspectRatio);
+    setAspectRatioTouched(appliedTemplate.aspectRatioTouched);
+    setConstraints(appliedTemplate.constraints);
+    if (appliedTemplate.variationCount) setVariationCount(appliedTemplate.variationCount);
+    if (appliedTemplate.quality) setQuality(appliedTemplate.quality);
     if (tpl.presetSelectable && presets.find((p) => p.id === tpl.presetId)) setPresetId(tpl.presetId);
     if (!tpl.presetSelectable) {
       setToast("This job’s preset is archived. Choose an active preset before submitting.");

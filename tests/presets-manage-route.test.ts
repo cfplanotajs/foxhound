@@ -35,6 +35,7 @@ test("archive action requires stableKey and updates archive flag", async () => {
 test("edit ignores client contentHash and does not create duplicate version for unchanged content", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origUpdate = prisma.preset.update;
+  const origTransaction = prisma.$transaction;
   let updated = false;
   (prisma.preset as any).findUnique = async () => ({
     id: "p1",
@@ -45,6 +46,7 @@ test("edit ignores client contentHash and does not create duplicate version for 
     updated = true;
     return {};
   };
+  (prisma as any).$transaction = async (fn: any) => fn(prisma);
   const res = await POST(
     new Request("http://x", {
       method: "POST",
@@ -67,6 +69,7 @@ test("edit ignores client contentHash and does not create duplicate version for 
   assert.equal(updated, false);
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
+  (prisma as any).$transaction = origTransaction;
 });
 
 test("duplicate uses deterministic contentHash derived from content", async () => {
@@ -241,6 +244,7 @@ test("duplicate returns clear stableKey conflict error", async () => {
 test("edit rejects incompatible quality and creates no version", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origUpdate = prisma.preset.update;
+  const origTransaction = prisma.$transaction;
   let updated = false;
   (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
   (prisma.preset as any).update = async () => { updated = true; return {}; };
@@ -253,18 +257,21 @@ test("edit rejects incompatible quality and creates no version", async () => {
   assert.equal(updated, false);
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
+  (prisma as any).$transaction = origTransaction;
 });
 
 
 test("edit retries on version collision and succeeds", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origPresetUpdate = prisma.preset.update;
+  const origTransaction = prisma.$transaction;
   const origFindFirst = prisma.presetVersion.findFirst;
   const origVersionCreate = prisma.presetVersion.create;
   const origFindContent = prisma.presetVersion.findUnique;
   let createCalls = 0;
   (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
   (prisma.preset as any).update = async () => ({});
+  (prisma as any).$transaction = async (fn: any) => fn(prisma);
   (prisma.presetVersion as any).findFirst = async () => ({ version: createCalls === 0 ? "v1" : "v2" });
   (prisma.presetVersion as any).findUnique = async () => null;
   (prisma.presetVersion as any).create = async () => {
@@ -277,6 +284,7 @@ test("edit retries on version collision and succeeds", async () => {
   assert.equal((await res.json()).version, "v3");
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origPresetUpdate;
+  (prisma as any).$transaction = origTransaction;
   (prisma.presetVersion as any).findFirst = origFindFirst;
   (prisma.presetVersion as any).create = origVersionCreate;
   (prisma.presetVersion as any).findUnique = origFindContent;
@@ -285,11 +293,13 @@ test("edit retries on version collision and succeeds", async () => {
 test("edit returns 500 after repeated version collisions", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origPresetUpdate = prisma.preset.update;
+  const origTransaction = prisma.$transaction;
   const origFindFirst = prisma.presetVersion.findFirst;
   const origVersionCreate = prisma.presetVersion.create;
   const origFindContent = prisma.presetVersion.findUnique;
   (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
   (prisma.preset as any).update = async () => ({});
+  (prisma as any).$transaction = async (fn: any) => fn(prisma);
   (prisma.presetVersion as any).findFirst = async () => ({ version: "v1" });
   (prisma.presetVersion as any).findUnique = async () => null;
   (prisma.presetVersion as any).create = async () => { throw Object.assign(new Error("collision"), { code: "P2002" }); };
@@ -297,7 +307,44 @@ test("edit returns 500 after repeated version collisions", async () => {
   assert.equal(res.status, 500);
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origPresetUpdate;
+  (prisma as any).$transaction = origTransaction;
   (prisma.presetVersion as any).findFirst = origFindFirst;
   (prisma.presetVersion as any).create = origVersionCreate;
   (prisma.presetVersion as any).findUnique = origFindContent;
+});
+
+test("edit keeps metadata unchanged when version creation fails inside transaction", async () => {
+  const origFindUnique = prisma.preset.findUnique;
+  const origTransaction = prisma.$transaction;
+  let metadataUpdated = false;
+  (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
+  (prisma as any).$transaction = async (fn: any) => {
+    const tx = {
+      preset: {
+        update: async () => {
+          metadataUpdated = true;
+          return {};
+        }
+      },
+      presetVersion: {
+        findFirst: async () => ({ version: "v1" }),
+        findUnique: async () => null,
+        create: async () => {
+          throw Object.assign(new Error("collision"), { code: "P2002" });
+        }
+      }
+    };
+    try {
+      return await fn(tx);
+    } catch {
+      metadataUpdated = false;
+      throw new Error("tx rolled back");
+    }
+  };
+
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset New", stylePrompt: "Style new", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} }) }));
+  assert.equal(res.status, 500);
+  assert.equal(metadataUpdated, false);
+  (prisma.preset as any).findUnique = origFindUnique;
+  (prisma as any).$transaction = origTransaction;
 });
