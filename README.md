@@ -112,6 +112,15 @@ npm run prisma:generate
 5. Submit edit.
 6. Review output in gallery and optionally download ZIP.
 
+### Live smoke-test checklist
+1. Generate a Demo/Mock image.
+2. Edit the Demo/Mock image and confirm a new output is created.
+3. Generate an OpenAI image (with key/credits configured).
+4. Edit that OpenAI image.
+5. Confirm both original and edited outputs appear in dashboard/gallery.
+6. Download ZIP and confirm edited output is included.
+7. Confirm source image file remains unchanged.
+
 ### Known limitations
 - No mask/canvas controls yet.
 - No multi-source reference editing.

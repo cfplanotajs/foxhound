@@ -7,6 +7,17 @@ import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/
 
 type Payload = Record<string, unknown>;
 
+export function extractResponsesImageResult(response: unknown): string {
+  const output = Array.isArray((response as { output?: unknown[] } | null)?.output) ? (response as { output: unknown[] }).output : [];
+  for (const item of output) {
+    const candidate = item as { type?: string; result?: unknown };
+    if (candidate?.type === "image_generation_call" && typeof candidate.result === "string" && candidate.result.length > 0) {
+      return candidate.result;
+    }
+  }
+  throw new Error("OpenAI Responses edit did not return image data");
+}
+
 export function buildOpenAIImagePayload(request: NormalizedImageRequest): Payload {
   const safeCount = 1;
   const spec = assertSupportedOpenAIModel(request.model);
@@ -102,6 +113,7 @@ export class OpenAIProvider implements ImageProvider {
     const preferred = (process.env.OPENAI_EDIT_ADAPTER ?? "responses").trim().toLowerCase();
     const supportsResponses = typeof (this.client as any).responses?.create === "function";
     if (preferred === "responses" && supportsResponses) return "responses";
+    if (preferred === "images_edit") return "images_edit";
     return "images_edit";
   }
 
@@ -161,11 +173,9 @@ export class OpenAIProvider implements ImageProvider {
       ],
       tools: [{ type: "image_generation", size: request.size, quality: request.quality }]
     });
-    const output = Array.isArray(response?.output) ? response.output : [];
-    const call = output.find((item: any) => item?.type === "image_generation_call" && typeof item?.result === "string");
-    if (!call?.result) throw new Error("OpenAI Responses edit did not return image data");
+    const imageB64 = extractResponsesImageResult(response);
     return {
-      images: [{ bytes: Buffer.from(call.result, "base64"), mimeType: "image/png" }],
+      images: [{ bytes: Buffer.from(imageB64, "base64"), mimeType: "image/png" }],
       providerMetadata: {
         mode: "edit",
         adapter: "responses",

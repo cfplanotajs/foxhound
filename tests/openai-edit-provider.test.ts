@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { OpenAIProvider } from "../lib/providers/openai.ts";
+import { extractResponsesImageResult, OpenAIProvider } from "../lib/providers/openai.ts";
 import { __resetEnvCacheForTests } from "../lib/env.ts";
 
 test("openai edit reads source image and calls images.edit", async () => {
@@ -66,4 +66,37 @@ test("openai edit can use responses adapter when available", async () => {
   };
   const out = await provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "edit this", sourceImagePath: source });
   assert.equal(out.providerMetadata.adapter, "responses");
+});
+
+test("responses adapter falls back to images.edit when responses unavailable", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  process.env.OPENAI_EDIT_ADAPTER = "responses";
+  __resetEnvCacheForTests();
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "foxhound-"));
+  const source = path.join(dir, "source.png");
+  await fs.writeFile(source, Buffer.from("pngbytes"));
+  const provider = new OpenAIProvider() as any;
+  provider.client = {
+    responses: {},
+    images: { edit: async () => ({ data: [{ b64_json: Buffer.from("fallback").toString("base64") }] }) }
+  };
+  const out = await provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "x", sourceImagePath: source });
+  assert.equal(out.providerMetadata.adapter, "images_edit");
+});
+
+test("extractResponsesImageResult handles mixed output and errors safely", () => {
+  const b64 = Buffer.from("img").toString("base64");
+  assert.equal(extractResponsesImageResult({ output: [{ type: "reasoning" }, { type: "image_generation_call", result: b64 }] }), b64);
+  assert.throws(() => extractResponsesImageResult({ output: [{ type: "image_generation_call", result: null }] }), /did not return image data/);
+  assert.throws(() => extractResponsesImageResult({ output: [{ type: "text" }] }), /did not return image data/);
+});
+
+test("missing source image fails safely", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  process.env.OPENAI_EDIT_ADAPTER = "images_edit";
+  __resetEnvCacheForTests();
+  const provider = new OpenAIProvider();
+  await assert.rejects(() => provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "x", sourceImagePath: "/nope.png" }), /Source image file not found/);
 });
