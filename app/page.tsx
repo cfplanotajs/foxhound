@@ -9,6 +9,7 @@ import { filterTasksByReview, getReviewStatusLabel, ReviewStatus } from "@/lib/r
 import { HeroHeader } from "@/components/studio/HeroHeader";
 import { ReviewToolbar } from "@/components/studio/ReviewToolbar";
 import { CompareModal } from "@/components/studio/CompareModal";
+import { GalleryGrid } from "@/components/studio/GalleryGrid";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -401,50 +402,8 @@ export default function DashboardPage() {
               <button className="rounded bg-emerald-900 px-3 py-2 text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
             </div>
           </div>
-          <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /><div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-            {filteredTasks.map((task) => {
-              const providerError = task.providerError;
-              const sourceTask = task.sourceTaskId ? tasks.find((x) => x.id === task.sourceTaskId) : null;
-
-              return (
-                <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  {task.imageUrl ? (
-                    <img src={task.imageUrl} alt={task.subjectPrompt} className="mb-3 h-64 w-full rounded-xl object-cover" />
-                  ) : (
-                    <div className="mb-2 flex h-48 items-center justify-center rounded bg-slate-100 text-slate-500">No Image Yet</div>
-                  )}
-                  <div className="mb-2 flex flex-wrap gap-1">{statusChip(task.status)}<span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{task.mode === "edit" ? "Edit" : "Generate"}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{task.provider === "mock" ? "Demo" : "OpenAI"}</span></div>
-                  <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
-                  <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
-                  <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
-                  {task.mode === "edit" ? <p className="text-xs font-semibold text-indigo-700">Edited from previous image · {task.editInstruction?.slice(0, 64) ?? "Edited from previous image"}</p> : null}
-                  {task.mode === "edit" && sourceTask?.imageUrl ? <div className="mt-2 flex items-center gap-2"><img src={sourceTask.imageUrl} alt="source preview" className="h-16 w-16 rounded border object-cover" /><p className="text-xs text-slate-600">Edited from previous image</p></div> : null}
-                  {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
-                  {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
-                  <p className="text-xs text-slate-600">Review: {getReviewStatusLabel(task.reviewStatus)}</p>
-                  <div className="mt-2 flex flex-wrap gap-1 text-xs">
-                    {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>{task.mode === "edit" ? "Continue editing" : "Edit"}</button> : null}
-                    {task.mode === "edit" && sourceTask?.imageUrl && task.imageUrl ? <button className="rounded bg-sky-100 px-2 py-1" onClick={() => setCompareTask(task)}>Compare</button> : null}
-                    <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Favorite</button>
-                    <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
-                    <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
-                    <button disabled={reviewUpdatingId === task.id} className="rounded bg-slate-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "unreviewed")}>Clear</button>
-                  </div>
-
-                  {task.status === "failed" ? (
-                    <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
-                      <p className="font-semibold text-rose-800">{providerError?.title ?? task.errorMessage ?? "Image generation failed"}</p>
-                      <p className="text-rose-700">{providerError?.designerMessage ?? "Please check technical details and retry."}{providerError?.suggestedAction ? ` Suggested action: ${providerError.suggestedAction}` : ""}</p>
-                      <details className="mt-1 text-xs text-rose-900">
-                        <summary>Technical details</summary>
-                        <p>{providerError?.technicalMessage ?? task.lastError ?? task.errorMessage}</p>
-                      </details>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+          <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} />
+          <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
         </section>
       )}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
