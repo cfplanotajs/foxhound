@@ -11,6 +11,7 @@ test("rerun creates a new job from source job id", async () => {
   let createdTaskData: any[] = [];
   (prisma.generationJob as any).findUnique = async () => ({
     id: "j1",
+    mode: "generate",
     provider: "mock",
     model: "mock-v1",
     tasks: [{ presetId: "p1", presetName: "Preset", presetVersion: "v1", stylePromptSnapshot: "s", subjectPrompt: "cat", finalPrompt: "f", constraints: null, provider: "mock", model: "mock-v1", maxAttempts: 3, defaultProviderSnapshot: "mock", defaultModelSnapshot: "mock-v1", defaultParamsJsonSnapshot: "{}", requestPayloadJson: "{}", presetVersionId: null }]
@@ -37,6 +38,7 @@ test("rerun openai job returns 400 when OPENAI_API_KEY missing and creates no ne
 
   (prisma.generationJob as any).findUnique = async () => ({
     id: "j1",
+    mode: "generate",
     provider: "openai",
     model: "gpt-image-2",
     tasks: [{ presetId: "p1", presetName: "Preset", presetVersion: "v1", stylePromptSnapshot: "s", subjectPrompt: "cat", finalPrompt: "f", constraints: null, provider: "openai", model: "gpt-image-2", maxAttempts: 3, defaultProviderSnapshot: "openai", defaultModelSnapshot: "gpt-image-2", defaultParamsJsonSnapshot: "{}", requestPayloadJson: "{}", presetVersionId: null }]
@@ -53,4 +55,41 @@ test("rerun openai job returns 400 when OPENAI_API_KEY missing and creates no ne
   (prisma.generationJob as any).findUnique = origFind;
   (prisma as any).$transaction = origTx;
   (prisma.preset as any).findUnique = origPresetFind;
+});
+
+test("rerun preserves edit lineage for edit jobs", async () => {
+  const origFind = prisma.generationJob.findUnique;
+  const origPresetFind = prisma.preset.findUnique;
+  const origTx = (prisma as any).$transaction;
+  let createdJobData: any = null;
+  (prisma.generationJob as any).findUnique = async () => ({
+    id: "j1",
+    mode: "edit",
+    sourceJobId: "root-job",
+    sourceTaskId: "root-task",
+    editInstruction: "make background white",
+    provider: "mock",
+    model: "mock-v1",
+    tasks: [{ presetId: "p1", presetName: "Preset", presetVersion: "v1", stylePromptSnapshot: "s", subjectPrompt: "cat", finalPrompt: "f", constraints: null, provider: "mock", model: "mock-v1", maxAttempts: 3, defaultProviderSnapshot: "mock", defaultModelSnapshot: "mock-v1", defaultParamsJsonSnapshot: "{}", requestPayloadJson: "{}", presetVersionId: null }]
+  });
+  (prisma.preset as any).findUnique = async () => ({ stableKey: "p1", isArchived: false });
+  (prisma as any).$transaction = async (fn: any) => fn({ generationJob: { create: async ({ data }: any) => { createdJobData = data; return { id: "new1" }; } }, generationTask: { createMany: async () => ({ count: 1 }) } });
+  const res = await POST(new Request("http://x", { method: "POST" }), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(res.status, 200);
+  assert.equal(createdJobData.mode, "edit");
+  assert.equal(createdJobData.sourceJobId, "root-job");
+  assert.equal(createdJobData.sourceTaskId, "root-task");
+  assert.equal(createdJobData.editInstruction, "make background white");
+  (prisma.generationJob as any).findUnique = origFind;
+  (prisma as any).$transaction = origTx;
+  (prisma.preset as any).findUnique = origPresetFind;
+});
+
+test("rerun rejects edit job with missing lineage", async () => {
+  const origFind = prisma.generationJob.findUnique;
+  (prisma.generationJob as any).findUnique = async () => ({ id: "j1", mode: "edit", sourceJobId: null, sourceTaskId: null, editInstruction: null, tasks: [{}] });
+  const res = await POST(new Request("http://x", { method: "POST" }), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Source edit job is missing edit lineage.");
+  (prisma.generationJob as any).findUnique = origFind;
 });

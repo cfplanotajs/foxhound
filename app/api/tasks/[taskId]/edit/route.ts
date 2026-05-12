@@ -8,7 +8,9 @@ import { resolveFinalTaskSize } from "@/lib/jobs/task-size";
 import { resolveEffectiveQuality } from "@/lib/providers/model-quality";
 import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
+import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 import { existsSync } from "node:fs";
+const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 
 const schema = z.object({
   presetId: z.string().min(1),
@@ -62,7 +64,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
         model,
         status: "queued",
         attempts: 0,
-        maxAttempts: 3,
+        maxAttempts: WORKER_MAX_ATTEMPTS,
         nextAttemptAt: null,
         defaultProviderSnapshot: latest.defaultProvider,
         defaultModelSnapshot: latest.defaultModel,

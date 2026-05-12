@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { POST } from "../app/api/tasks/[taskId]/edit/route.ts";
 import { prisma } from "../lib/db.ts";
+import { getWorkerMaxAttempts } from "../lib/jobs/worker-config.ts";
 
 test("edit route returns 404 for missing source task", async () => {
   const orig = prisma.generationTask.findUnique;
@@ -36,6 +37,7 @@ test("edit route creates edit job in mock mode", async () => {
   const rows = (globalThis as any).__editTaskRows;
   assert.equal(rows.length, 2);
   assert.equal(JSON.parse(rows[0].requestPayloadJson).metadata.mode, "edit");
+  assert.equal(rows[0].maxAttempts, getWorkerMaxAttempts());
   (prisma.generationTask as any).findUnique = o1;
   (prisma.preset as any).findUnique = o2;
   (prisma as any).$transaction = o3;

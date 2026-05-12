@@ -10,6 +10,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ jo
     const { jobId } = await params;
     const source = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { tasks: { orderBy: { createdAt: "asc" } }, project: true, folder: true } });
     if (!source || source.tasks.length === 0) return NextResponse.json({ error: "Source job not found." }, { status: 404 });
+    if (source.mode === "edit" && (!source.sourceJobId || !source.sourceTaskId || !source.editInstruction)) {
+      return NextResponse.json({ error: "Source edit job is missing edit lineage." }, { status: 400 });
+    }
     if (source.projectId && source.project?.isArchived) return NextResponse.json({ error: "Source project is archived. Use Duplicate into form instead." }, { status: 400 });
     if (source.folderId && source.folder?.isArchived) return NextResponse.json({ error: "Source folder is archived. Use Duplicate into form instead." }, { status: 400 });
     const first = source.tasks[0];
@@ -18,7 +21,17 @@ export async function POST(_request: Request, { params }: { params: Promise<{ jo
     ensureJobProviderConfigured(source.provider as "openai" | "mock");
 
     const job = await createJobAndTasksAtomic(prisma as never, {
-      jobData: { status: "queued", provider: source.provider, model: source.model, projectId: source.projectId, folderId: source.folderId },
+      jobData: {
+        status: "queued",
+        mode: source.mode,
+        sourceJobId: source.mode === "edit" ? source.sourceJobId : null,
+        sourceTaskId: source.mode === "edit" ? source.sourceTaskId : null,
+        editInstruction: source.mode === "edit" ? source.editInstruction : null,
+        provider: source.provider,
+        model: source.model,
+        projectId: source.projectId,
+        folderId: source.folderId
+      },
       taskData: source.tasks.map((task: any) => ({
         presetId: task.presetId,
         presetName: task.presetName,
