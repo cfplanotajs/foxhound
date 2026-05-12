@@ -15,6 +15,7 @@ test("openai edit reads source image and calls images.edit", async () => {
   await fs.writeFile(source, Buffer.from("pngbytes"));
 
   const provider = new OpenAIProvider() as any;
+  process.env.OPENAI_EDIT_ADAPTER = "images_edit";
   provider.client = {
     images: {
       edit: async (payload: any) => {
@@ -41,4 +42,28 @@ test("openai edit rejects unsupported model", async () => {
     () => provider.generateImage({ provider: "openai", mode: "edit", model: "dall-e-3", prompt: "edit", sourceImagePath: "/tmp/x.png" }),
     /does not support image editing/
   );
+});
+
+test("openai edit can use responses adapter when available", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  process.env.OPENAI_EDIT_ADAPTER = "responses";
+  __resetEnvCacheForTests();
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "foxhound-"));
+  const source = path.join(dir, "source.png");
+  await fs.writeFile(source, Buffer.from("pngbytes"));
+
+  const provider = new OpenAIProvider() as any;
+  provider.client = {
+    responses: {
+      create: async (payload: any) => {
+        assert.equal(payload.model, "gpt-image-2");
+        assert.equal(payload.tools[0].type, "image_generation");
+        return { output: [{ type: "image_generation_call", result: Buffer.from("edited2").toString("base64") }] };
+      }
+    },
+    images: { edit: async () => { throw new Error("should not call images.edit"); } }
+  };
+  const out = await provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "edit this", sourceImagePath: source });
+  assert.equal(out.providerMetadata.adapter, "responses");
 });

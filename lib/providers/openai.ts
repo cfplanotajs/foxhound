@@ -93,6 +93,19 @@ export class OpenAIProvider implements ImageProvider {
   }
 
   private async editImage(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
+    const adapter = this.selectEditAdapter();
+    if (adapter === "responses") return this.editImageWithResponses(request);
+    return this.editImageWithImagesEdit(request);
+  }
+
+  private selectEditAdapter(): "responses" | "images_edit" {
+    const preferred = (process.env.OPENAI_EDIT_ADAPTER ?? "responses").trim().toLowerCase();
+    const supportsResponses = typeof (this.client as any).responses?.create === "function";
+    if (preferred === "responses" && supportsResponses) return "responses";
+    return "images_edit";
+  }
+
+  private async loadSourceImage(request: NormalizedImageRequest): Promise<{ bytes: Buffer; ext: string; mimeType: string }> {
     const spec = assertSupportedOpenAIModel(request.model);
     if (spec.family !== "gpt-image") throw new Error(`Model ${request.model} does not support image editing in this adapter.`);
     if (!request.sourceImagePath) throw new Error("Source image file not found");
@@ -104,6 +117,12 @@ export class OpenAIProvider implements ImageProvider {
     }
     const ext = path.extname(request.sourceImagePath).toLowerCase();
     const mimeType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".webp" ? "image/webp" : "image/png";
+    return { bytes, ext, mimeType };
+  }
+
+  private async editImageWithImagesEdit(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
+    const spec = assertSupportedOpenAIModel(request.model);
+    const { bytes, ext, mimeType } = await this.loadSourceImage(request);
     const file = new File([new Uint8Array(bytes)], `source${ext || ".png"}`, { type: mimeType });
     const payload = { model: spec.id, image: file, prompt: request.prompt, size: request.size, quality: request.quality };
     const response = await this.client.images.edit(payload as never);
@@ -113,6 +132,43 @@ export class OpenAIProvider implements ImageProvider {
       providerMetadata: {
         mode: "edit",
         adapter: "images_edit",
+        model: spec.id,
+        size: request.size ?? null,
+        quality: request.quality ?? null,
+        sourceTaskId: request.sourceTaskId ?? null,
+        sourceJobId: request.sourceJobId ?? null,
+        editInstruction: request.editInstruction?.slice(0, 200) ?? null,
+        upstreamPayload: { model: spec.id, size: request.size ?? null, quality: request.quality ?? null }
+      }
+    };
+  }
+
+  private async editImageWithResponses(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
+    const spec = assertSupportedOpenAIModel(request.model);
+    const { bytes, mimeType } = await this.loadSourceImage(request);
+    const b64 = bytes.toString("base64");
+    const imageUrl = `data:${mimeType};base64,${b64}`;
+    const response = await (this.client as any).responses.create({
+      model: spec.id,
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: request.prompt },
+            { type: "input_image", image_url: imageUrl }
+          ]
+        }
+      ],
+      tools: [{ type: "image_generation", size: request.size, quality: request.quality }]
+    });
+    const output = Array.isArray(response?.output) ? response.output : [];
+    const call = output.find((item: any) => item?.type === "image_generation_call" && typeof item?.result === "string");
+    if (!call?.result) throw new Error("OpenAI Responses edit did not return image data");
+    return {
+      images: [{ bytes: Buffer.from(call.result, "base64"), mimeType: "image/png" }],
+      providerMetadata: {
+        mode: "edit",
+        adapter: "responses",
         model: spec.id,
         size: request.size ?? null,
         quality: request.quality ?? null,

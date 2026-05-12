@@ -98,7 +98,7 @@ npm run prisma:generate
 - Added server-side edit job foundation via `POST /api/tasks/[taskId]/edit`.
 - Edit jobs are linked to source lineage (`mode=edit`, `sourceJobId`, `sourceTaskId`, `editInstruction`).
 - Demo/Mock provider supports edit-mode processing end-to-end.
-- OpenAI edit mode is implemented through the OpenAI **Images Edit** adapter path for `gpt-image-2`.
+- OpenAI edit mode prefers the OpenAI **Responses API** image-generation tool adapter when available, and falls back to **Images Edit**.
 - Source image is loaded server-side from completed task output; source files are never exposed to client DTOs.
 - Completed image cards now expose an Edit action.
 - Edit drawer supports source preview, instruction, quick chips, and submit to `/api/tasks/[taskId]/edit`.
@@ -116,6 +116,7 @@ npm run prisma:generate
 - No mask/canvas controls yet.
 - No multi-source reference editing.
 - No conversational multi-turn edit workflow.
+- Tests use mocked SDK clients only; no live OpenAI calls are made.
 
 ## Verification note for Next.js route types
 - In this Next 15.2 setup, `npm run typecheck` expects `.next/types` files.
