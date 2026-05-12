@@ -124,6 +124,9 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
     },
     orderBy: { createdAt: "asc" }
   });
+  const sourceTask = (queued as any).mode === "edit" && (queued as any).sourceTaskId
+    ? await prisma.generationTask.findUnique({ where: { id: (queued as any).sourceTaskId } })
+    : null;
 
   for (const task of tasks) {
     if (task.status === "failed" && !(task.attempts < task.maxAttempts && !!task.nextAttemptAt && task.nextAttemptAt <= new Date())) continue;
@@ -150,6 +153,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
         presetName: task.presetName,
         sourceTaskId: (queued as any).sourceTaskId ?? undefined,
         sourceJobId: (queued as any).sourceJobId ?? undefined,
+        sourceImagePath: sourceTask?.outputPath ?? undefined,
         editInstruction: (queued as any).editInstruction ?? undefined
       });
       await prisma.generationTask.update({

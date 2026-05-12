@@ -457,7 +457,7 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold">Edit Image</h2>
           <p className="text-sm text-slate-600">Describe what to change. The source image will stay untouched; Foxhound creates a new edit job.</p>
           {editSourceTask.imageUrl ? <img src={editSourceTask.imageUrl} alt="source" className="mt-3 h-48 w-48 rounded object-cover" /> : null}
-          {provider === "openai" ? <p className="mt-2 text-xs text-amber-700">OpenAI edit mode is coming next. Use Demo Mode to test the edit workflow.</p> : null}
+          {provider === "openai" ? <p className="mt-2 text-xs text-amber-700">OpenAI edit mode sends your completed source image plus instruction to the server-side OpenAI adapter. Demo Mode remains available for offline testing.</p> : null}
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {["Clean up artifacts","Make white background","Match selected preset","Make it more kid-friendly","Fix hands/fingers","Remove text","Create cleaner sticker version"].map((chip) => <button key={chip} className="rounded-full border px-2 py-1" onClick={() => setEditInstruction((c) => appendEditChip(c, chip))}>{chip}</button>)}
           </div>

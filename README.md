@@ -94,17 +94,25 @@ npm run prisma:generate
 # then apply the new migration in your normal Prisma workflow
 ```
 
-## Edit Mode (Stage 1 server core)
+## Edit Mode
 - Added server-side edit job foundation via `POST /api/tasks/[taskId]/edit`.
 - Edit jobs are linked to source lineage (`mode=edit`, `sourceJobId`, `sourceTaskId`, `editInstruction`).
 - Demo/Mock provider supports edit-mode processing end-to-end.
-- OpenAI edit mode is intentionally not implemented in Stage 1 and returns a friendly message.
-- Stage 1 supports edit-from-existing-completed-output only.
-- No edit drawer UI yet (planned for Stage 2).
-
-## Edit Mode (Stage 2 UI)
+- OpenAI edit mode is implemented through the OpenAI **Images Edit** adapter path for `gpt-image-2`.
+- Source image is loaded server-side from completed task output; source files are never exposed to client DTOs.
 - Completed image cards now expose an Edit action.
 - Edit drawer supports source preview, instruction, quick chips, and submit to `/api/tasks/[taskId]/edit`.
-- Mock/Demo edit is fully demoable end-to-end.
 - Source image is never overwritten; edit always creates a new job.
-- OpenAI live edit adapter remains Stage 3.
+
+### Demo script
+1. Generate an image.
+2. Click **Edit** on a completed task.
+3. Choose **OpenAI** (live key required) or **Demo Mode**.
+4. Enter edit instruction.
+5. Submit edit.
+6. Review output in gallery and optionally download ZIP.
+
+### Known limitations
+- No mask/canvas controls yet.
+- No multi-source reference editing.
+- No conversational multi-turn edit workflow.

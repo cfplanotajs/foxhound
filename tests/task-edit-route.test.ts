@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { POST } from "../app/api/tasks/[taskId]/edit/route.ts";
 import { prisma } from "../lib/db.ts";
 import { getWorkerMaxAttempts } from "../lib/jobs/worker-config.ts";
+import { __resetEnvCacheForTests } from "../lib/env.ts";
 
 function setupEditableSource() {
   const o1 = prisma.generationTask.findUnique;
@@ -93,5 +94,18 @@ test("edit route rejects mismatched project/folder", async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, "Folder must belong to selected project.");
   (prisma.projectFolder as any).findUnique = of;
+  restore();
+});
+
+test("edit route returns friendly 400 when openai key missing", async () => {
+  const restore = setupEditableSource();
+  const prev = process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  __resetEnvCacheForTests();
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", provider: "openai", model: "gpt-image-2", editInstruction: "white bg" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /OpenAI API key is missing/);
+  if (prev) process.env.OPENAI_API_KEY = prev;
+  __resetEnvCacheForTests();
   restore();
 });

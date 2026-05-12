@@ -11,6 +11,8 @@ import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 import { resolveJobProjectFolderAssignment } from "@/lib/jobs/project-folder-assignment";
 import { existsSync } from "node:fs";
+import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
+import { MISSING_OPENAI_KEY_MESSAGE } from "@/lib/env";
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 
 const schema = z.object({
@@ -42,7 +44,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     const defaultParams = JSON.parse(latest.defaultParamsJson || "{}") as Record<string, unknown>;
     const { provider, model } = resolveProviderAndModel({ providerFromBody: body.provider, modelFromBody: body.model, presetDefaultProvider: latest.defaultProvider, presetDefaultModel: latest.defaultModel });
     if (!provider || !model) return NextResponse.json({ error: "Provider and model are required." }, { status: 400 });
-    if (provider === "openai") return NextResponse.json({ error: "OpenAI edit mode is not implemented yet. Use Demo Mode for edit workflow testing." }, { status: 400 });
+    if (provider === "openai") {
+      const spec = assertSupportedOpenAIModel(model);
+      if (spec.family !== "gpt-image") return NextResponse.json({ error: `Model ${model} does not support image editing in this adapter.` }, { status: 400 });
+    }
     ensureJobProviderConfigured(provider);
 
     const sizeRes = resolveFinalTaskSize({ model, aspectRatio: body.aspectRatio, presetDefaultSize: (defaultParams as any).size ?? null });
@@ -80,6 +85,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     return NextResponse.json({ jobId: job.id, status: "queued" });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+    if (error instanceof Error && error.message === MISSING_OPENAI_KEY_MESSAGE) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }
