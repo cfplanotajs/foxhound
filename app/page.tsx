@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const [editInstruction, setEditInstruction] = useState("");
   const [editConstraints, setEditConstraints] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [compareTask, setCompareTask] = useState<JobTask | null>(null);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -318,16 +319,21 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 bg-slate-50/60 p-6">
-      <header className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+    <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
+      <div className="mx-auto max-w-7xl space-y-6 p-6"><header className="rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-sm backdrop-blur">
         <h1 className="text-3xl font-bold text-slate-900">Foxhound Studio Console</h1>
-        <p className="mt-2 text-slate-600">Generate consistent visual assets from reusable studio presets.</p>
+        <p className="mt-2 text-slate-600">Create, edit, review, and export studio-ready AI visuals.</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+          <span className={`rounded-full px-3 py-1 ${provider === "mock" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>Demo Mode</span>
+          <span className={`rounded-full px-3 py-1 ${provider === "openai" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-500"}`}>OpenAI</span>
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Worker Queue</span>
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
           {["Select Preset", "Write Prompt", "Worker Generates", "Review & Download"].map((step) => (
             <div key={step} className="rounded-xl bg-slate-100 px-3 py-2 text-slate-700">{step}</div>
           ))}
         </div>
-      <div className="mt-4"><button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => setShowManager((v) => !v)}>{showManager ? "Hide Preset Manager" : "Manage Presets"}</button></div></header>
+      <div className="mt-4"><button className="rounded-xl bg-slate-800 px-4 py-2 text-white" onClick={() => setShowManager((v) => !v)}>{showManager ? "Hide Preset Manager" : "Manage Presets"}</button></div></header>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -347,7 +353,7 @@ export default function DashboardPage() {
           ) : null}
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="grid gap-1 text-sm"><span className="font-medium">Provider</span><select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border p-2"><option value="mock">Demo Mode (Mock)</option><option value="openai">OpenAI</option></select></label>
+            <div className="grid gap-1 text-sm"><span className="font-medium">Provider</span><div className="inline-flex rounded-xl border border-slate-300 bg-slate-100 p-1"><button type="button" onClick={() => setProvider("mock")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${provider==="mock"?"bg-white text-slate-900 shadow":"text-slate-600"}`}>Demo Mode</button><button type="button" onClick={() => setProvider("openai")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${provider==="openai"?"bg-white text-slate-900 shadow":"text-slate-600"}`}>OpenAI</button></div></div>
             <label className="grid gap-1 text-sm"><span className="font-medium">Model</span>{provider === "mock" ? <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="mock-v1">mock-v1</option></select> : <select value={model} onChange={(e) => setModel(e.target.value)} className="rounded border p-2"><option value="gpt-image-2">gpt-image-2</option><option value="gpt-image-1">gpt-image-1</option><option value="dall-e-3">dall-e-3</option><option value="dall-e-2">dall-e-2</option></select>}</label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => { setAspectRatio(e.target.value); setAspectRatioTouched(true); }} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
@@ -364,7 +370,7 @@ export default function DashboardPage() {
           <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className="min-h-24 rounded border p-2" /></label>
           <label className="mt-2 grid gap-1 text-sm"><span className="font-medium">Production Constraints (optional)</span><textarea value={constraints} onChange={(e) => setConstraints(e.target.value)} className="min-h-16 rounded border p-2" /></label>
           <p className="mt-2 text-xs text-slate-500">Submit is enabled when preset, provider, model, and at least one prompt line are present.</p>
-          <button disabled={loading || !formValid} className="mt-3 rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={submitJob}>{loading ? "Submitting..." : "Submit Job"}</button>
+          <button disabled={loading || !formValid} className="mt-3 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={submitJob}>{loading ? "Generating..." : "Generate Images"}</button>
         </div>
       </section>
 
@@ -412,23 +418,24 @@ export default function DashboardPage() {
               const sourceTask = task.sourceTaskId ? tasks.find((x) => x.id === task.sourceTaskId) : null;
 
               return (
-                <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   {task.imageUrl ? (
-                    <img src={task.imageUrl} alt={task.subjectPrompt} className="mb-2 h-48 w-full rounded object-cover" />
+                    <img src={task.imageUrl} alt={task.subjectPrompt} className="mb-3 h-64 w-full rounded-xl object-cover" />
                   ) : (
                     <div className="mb-2 flex h-48 items-center justify-center rounded bg-slate-100 text-slate-500">No Image Yet</div>
                   )}
-                  <div className="mb-2">{statusChip(task.status)}</div>
+                  <div className="mb-2 flex flex-wrap gap-1">{statusChip(task.status)}<span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{task.mode === "edit" ? "Edit" : "Generate"}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{task.provider === "mock" ? "Demo" : "OpenAI"}</span></div>
                   <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
                   <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
                   <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
                   {task.mode === "edit" ? <p className="text-xs font-semibold text-indigo-700">Edited from previous image · {task.editInstruction?.slice(0, 64) ?? "Edited from previous image"}</p> : null}
-                  {task.mode === "edit" && sourceTask?.imageUrl ? <img src={sourceTask.imageUrl} alt="source preview" className="mt-1 h-16 w-16 rounded border object-cover" /> : null}
+                  {task.mode === "edit" && sourceTask?.imageUrl ? <div className="mt-2 flex items-center gap-2"><img src={sourceTask.imageUrl} alt="source preview" className="h-16 w-16 rounded border object-cover" /><p className="text-xs text-slate-600">Edited from previous image</p></div> : null}
                   {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
                   {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
                   <p className="text-xs text-slate-600">Review: {getReviewStatusLabel(task.reviewStatus)}</p>
-                  <div className="mt-2 flex gap-1 text-xs">
+                  <div className="mt-2 flex flex-wrap gap-1 text-xs">
                     {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>{task.mode === "edit" ? "Continue editing" : "Edit"}</button> : null}
+                    {task.mode === "edit" && sourceTask?.imageUrl && task.imageUrl ? <button className="rounded bg-sky-100 px-2 py-1" onClick={() => setCompareTask(task)}>Compare</button> : null}
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Favorite</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
@@ -473,17 +480,29 @@ export default function DashboardPage() {
       {editSourceTask ? (
         <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Edit Image</h2>
-          <p className="text-sm text-slate-600">Describe what to change. The source image will stay untouched; Foxhound creates a new edit job.</p>
+          <p className="text-sm text-slate-600">Describe what to change. The source stays untouched. Foxhound creates a new edited result.</p>
           {editSourceTask.imageUrl ? <img src={editSourceTask.imageUrl} alt="source" className="mt-3 h-48 w-48 rounded object-cover" /> : null}
           {provider === "openai" ? <p className="mt-2 text-xs text-amber-700">OpenAI edit mode sends your completed source image plus instruction to the server-side OpenAI adapter. Demo Mode remains available for offline testing.</p> : null}
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            {["Clean up artifacts","Make white background","Match selected preset","Make it more kid-friendly","Fix hands/fingers","Remove text","Create cleaner sticker version"].map((chip) => <button key={chip} className="rounded-full border px-2 py-1" onClick={() => setEditInstruction((c) => appendEditChip(c, chip))}>{chip}</button>)}
+            {["Clean up artifacts","White background","Match selected preset","More kid-friendly","Remove text","Cleaner sticker version"].map((chip) => <button key={chip} className="rounded-full border border-slate-300 bg-white px-3 py-1.5 font-medium" onClick={() => setEditInstruction((c) => appendEditChip(c, chip))}>{chip}</button>)}
           </div>
           <textarea value={editInstruction} onChange={(e) => setEditInstruction(e.target.value)} className="mt-3 min-h-24 w-full rounded border p-2" placeholder="Keep character and pose, make background white..." />
           <textarea value={editConstraints} onChange={(e) => setEditConstraints(e.target.value)} className="mt-2 min-h-16 w-full rounded border p-2" placeholder="Optional constraints" />
           <div className="mt-3 flex gap-2"><button className="rounded bg-indigo-600 px-3 py-2 text-white" disabled={editSubmitting} onClick={submitEdit}>{editSubmitting ? "Submitting..." : "Submit Edit"}</button><button className="rounded border px-3 py-2" onClick={() => setEditSourceTask(null)}>Close</button></div>
         </section>
       ) : null}
-    </main>
+      {compareTask && compareTask.sourceTaskId ? (
+        <section className="fixed inset-0 z-20 bg-slate-900/60 p-6">
+          <div className="mx-auto max-w-5xl rounded-2xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-semibold">Compare: Source vs Edit</h3><button className="rounded border px-3 py-1" onClick={() => setCompareTask(null)}>Close</button></div>
+            <p className="mb-3 text-sm text-slate-600">{compareTask.editInstruction ?? "Edited result comparison"}</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <img src={tasks.find((t) => t.id === compareTask.sourceTaskId)?.imageUrl ?? ""} alt="source compare" className="h-72 w-full rounded-xl border object-cover" />
+              <img src={compareTask.imageUrl ?? ""} alt="edited compare" className="h-72 w-full rounded-xl border object-cover" />
+            </div>
+          </div>
+        </section>
+      ) : null}
+    </div></main>
   );
 }
