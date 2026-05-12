@@ -13,6 +13,7 @@ import { resolveJobProjectFolderAssignment } from "@/lib/jobs/project-folder-ass
 import { existsSync } from "node:fs";
 import { assertSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { MISSING_OPENAI_KEY_MESSAGE } from "@/lib/env";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 
 const schema = z.object({
@@ -31,7 +32,9 @@ const schema = z.object({
 export async function POST(request: Request, { params }: { params: Promise<{ taskId: string }> }) {
   try {
     const { taskId } = await params;
-    const body = schema.parse(await request.json());
+    const parsed = await parseJsonBody(request);
+    if (!parsed.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const body = schema.parse(parsed.data);
     const sourceTask = await prisma.generationTask.findUnique({ where: { id: taskId }, include: { job: true } });
     if (!sourceTask) return NextResponse.json({ error: "Source task not found" }, { status: 404 });
     if (sourceTask.status !== "completed") return NextResponse.json({ error: "Source task must be completed before editing." }, { status: 400 });

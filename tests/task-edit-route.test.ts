@@ -24,6 +24,17 @@ test("edit route returns 404 for missing source task", async () => {
   (prisma.generationTask as any).findUnique = orig;
 });
 
+test("edit route returns 400 for malformed JSON body", async () => {
+  const res = await POST(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Malformed JSON request body.");
+});
+
+test("edit route returns 400 for invalid schema body", async () => {
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "", editInstruction: "" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+});
+
 test("edit route rejects non-completed task", async () => {
   const orig = prisma.generationTask.findUnique;
   (prisma.generationTask as any).findUnique = async () => ({ id: "t1", status: "queued" });
