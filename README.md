@@ -120,6 +120,9 @@ npm run prisma:generate
 5. Confirm both original and edited outputs appear in dashboard/gallery.
 6. Download ZIP and confirm edited output is included.
 7. Confirm source image file remains unchanged.
+8. Use gallery compare cues (source thumbnail + edit instruction) to review before/after.
+9. Use Continue editing on an edited card to chain another edit job.
+10. Use Download Approved ZIP to export only approved results.
 
 ### Known limitations
 - No mask/canvas controls yet.

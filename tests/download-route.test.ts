@@ -73,3 +73,24 @@ test("download route returns safe 500 on unexpected filesystem error", async () 
   (fs as any).stat = origStat;
   (prisma.generationTask as any).findMany = origFindMany;
 });
+
+test("download route approvedOnly returns 400 when none approved", async () => {
+  const orig = prisma.generationTask.findMany;
+  (prisma.generationTask as any).findMany = async () => [];
+  const res = await GET(new Request("http://x?approvedOnly=1"), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "No approved images to download.");
+  (prisma.generationTask as any).findMany = orig;
+});
+
+test("download route approvedOnly includes approved filter", async () => {
+  const orig = prisma.generationTask.findMany;
+  let whereArg: any;
+  (prisma.generationTask as any).findMany = async ({ where }: any) => {
+    whereArg = where;
+    return [];
+  };
+  await GET(new Request("http://x?approvedOnly=1"), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(whereArg.reviewStatus, "approved");
+  (prisma.generationTask as any).findMany = orig;
+});

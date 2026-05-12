@@ -236,6 +236,21 @@ export default function DashboardPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
+  async function downloadApprovedZip() {
+    if (!jobId) return;
+    const res = await fetch(`/api/jobs/${jobId}/download?approvedOnly=1`);
+    if (!res.ok) {
+      const err = await res.json();
+      return alert(err.error ?? "Download failed");
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `job-${jobId}-approved.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   async function submitEdit() {
     if (!editSourceTask) return;
     if (!editInstruction.trim()) return setToast("Edit instruction is required.");
@@ -387,12 +402,14 @@ export default function DashboardPage() {
               <button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => refreshJob()}>Refresh Status</button>
               <button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => refreshImages()}>Refresh Gallery</button>
               <button className="rounded bg-emerald-700 px-3 py-2 text-white" onClick={downloadZip}>Download ZIP</button>
+              <button className="rounded bg-emerald-900 px-3 py-2 text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
             </div>
           </div>
-
+          <p className="mt-2 text-xs text-slate-600">Approved = ready to use · Favorite = promising · Rejected = not useful</p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">{(["all","favorite","approved","rejected"] as const).map((f) => <button key={f} className={`rounded-full px-3 py-1 border ${reviewFilter===f?"bg-slate-900 text-white border-slate-900":"bg-white text-slate-700 border-slate-300"}`} onClick={() => setReviewFilter(f)}>{f === "all" ? "All" : f === "favorite" ? "Favorites" : f === "approved" ? "Approved" : "Rejected"}</button>)}</div>{reviewError ? <p className="mt-2 rounded bg-rose-100 p-2 text-sm text-rose-700">{reviewError}</p> : null}<div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {filteredTasks.map((task) => {
               const providerError = task.providerError;
+              const sourceTask = task.sourceTaskId ? tasks.find((x) => x.id === task.sourceTaskId) : null;
 
               return (
                 <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -405,12 +422,13 @@ export default function DashboardPage() {
                   <p className="text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
                   <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
                   <p className="text-sm"><strong>Provider/Model:</strong> {task.provider} / {task.model}</p>{task.provider === "mock" ? <p className="text-xs font-semibold text-emerald-700">Demo/Mock Output</p> : null}
-                  {task.mode === "edit" ? <p className="text-xs font-semibold text-indigo-700">Edit · {task.editInstruction?.slice(0, 64) ?? "Edited from previous image"}</p> : null}
+                  {task.mode === "edit" ? <p className="text-xs font-semibold text-indigo-700">Edited from previous image · {task.editInstruction?.slice(0, 64) ?? "Edited from previous image"}</p> : null}
+                  {task.mode === "edit" && sourceTask?.imageUrl ? <img src={sourceTask.imageUrl} alt="source preview" className="mt-1 h-16 w-16 rounded border object-cover" /> : null}
                   {task.variationIndex && task.variationCount ? <p className="text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
                   {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
                   <p className="text-xs text-slate-600">Review: {getReviewStatusLabel(task.reviewStatus)}</p>
                   <div className="mt-2 flex gap-1 text-xs">
-                    {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(task.editInstruction ?? ""); setEditConstraints(""); }}>Edit</button> : null}
+                    {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>{task.mode === "edit" ? "Continue editing" : "Edit"}</button> : null}
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Favorite</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
                     <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>

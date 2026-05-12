@@ -7,8 +7,10 @@ import { prisma } from "@/lib/db";
 export async function GET(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   try {
     const { jobId } = await params;
-    const tasks = await prisma.generationTask.findMany({ where: { jobId, status: "completed" } });
-    if (tasks.length === 0) return NextResponse.json({ error: "No completed images" }, { status: 400 });
+    const { searchParams } = new URL(_request.url);
+    const approvedOnly = searchParams.get("approvedOnly") === "1";
+    const tasks = await prisma.generationTask.findMany({ where: { jobId, status: "completed", ...(approvedOnly ? { reviewStatus: "approved" } : {}) } });
+    if (tasks.length === 0) return NextResponse.json({ error: approvedOnly ? "No approved images to download." : "No completed images" }, { status: 400 });
 
     for (const task of tasks) {
       if (!task.outputPath) return NextResponse.json({ error: "One or more image files are missing." }, { status: 404 });
