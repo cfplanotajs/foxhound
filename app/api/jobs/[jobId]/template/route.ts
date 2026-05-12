@@ -5,7 +5,7 @@ import { inferAspectRatioFromSize } from "@/lib/jobs/task-size";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
-  const job = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { tasks: { orderBy: { createdAt: "asc" } } } });
+  const job = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { tasks: { orderBy: { createdAt: "asc" } }, project: true, folder: true } });
   if (!job || job.tasks.length === 0) return NextResponse.json({ error: "Job not found." }, { status: 404 });
   const first = job.tasks[0];
   const preset = await prisma.preset.findUnique({ where: { stableKey: first.presetId } });
@@ -38,6 +38,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
       variationCount: metadata.variationCount ?? providerPayload.variationCount ?? 1,
       constraints: first.constraints ?? null,
       status: job.status
+      ,projectId: job.projectId ?? null
+      ,folderId: job.folderId ?? null
+      ,projectName: job.project?.name ?? null
+      ,folderName: job.folder?.name ?? null
     }
   });
 }

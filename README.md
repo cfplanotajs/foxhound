@@ -79,3 +79,17 @@ npm run build
 - Single-tenant local app (no auth/permissions).
 - Local worker poller only.
 - No cloud storage or deployment tooling in-scope.
+
+## Projects & Folders (Phase 5A)
+- Use Projects to group related studio workstreams.
+- Use Folders inside a project for optional sub-grouping.
+- New jobs can be submitted as Unassigned, Project-only, or Project+Folder.
+- Recent Jobs respects selected Project/Folder filters.
+- Existing legacy jobs remain valid as Unassigned.
+
+### Migration
+Run:
+```bash
+npm run prisma:generate
+# then apply the new migration in your normal Prisma workflow
+```

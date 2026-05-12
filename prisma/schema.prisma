@@ -67,7 +67,38 @@ model GenerationJob {
   createdAt      DateTime         @default(now())
   startedAt      DateTime?
   completedAt    DateTime?
+  projectId      String?
+  folderId       String?
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  folder         ProjectFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
   tasks          GenerationTask[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  stableKey   String          @unique
+  name        String
+  description String?
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  folders     ProjectFolder[]
+  jobs        GenerationJob[]
+}
+
+model ProjectFolder {
+  id          String         @id @default(cuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stableKey   String
+  name        String
+  description String?
+  isArchived  Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  jobs        GenerationJob[]
+
+  @@unique([projectId, stableKey])
 }
 
 model GenerationTask {

@@ -29,6 +29,17 @@ export async function POST(request: Request) {
     await seedPresetsFromConfig();
     const preset = await getPresetByStableKey(body.presetId);
     if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 400 });
+    if (body.projectId) {
+      const project = await prisma.project.findUnique({ where: { id: body.projectId } });
+      if (!project) return NextResponse.json({ error: "Project not found." }, { status: 400 });
+      if (project.isArchived) return NextResponse.json({ error: "Archived project cannot be used for new jobs." }, { status: 400 });
+    }
+    if (body.folderId) {
+      const folder = await prisma.projectFolder.findUnique({ where: { id: body.folderId } });
+      if (!folder) return NextResponse.json({ error: "Folder not found." }, { status: 400 });
+      if (folder.isArchived) return NextResponse.json({ error: "Archived folder cannot be used for new jobs." }, { status: 400 });
+      if (body.projectId && folder.projectId !== body.projectId) return NextResponse.json({ error: "Folder must belong to selected project." }, { status: 400 });
+    }
 
     if (body.idempotencyKey) {
       const existing = await prisma.generationJob.findUnique({ where: { idempotencyKey: body.idempotencyKey } });
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
         Array.from({ length: variationCount }, (_, index) => ({ subjectPrompt, variationIndex: index + 1 }))
       );
       job = await createJobAndTasksAtomic(prisma as never, {
-        jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey },
+        jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey, projectId: body.projectId ?? null, folderId: body.folderId ?? null },
         taskData: taskPayloads.map(({ subjectPrompt, variationIndex }) => ({
             presetId: preset.stableKey,
             presetName: preset.name,

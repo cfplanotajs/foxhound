@@ -28,6 +28,8 @@ type JobTask = {
   reviewStatus?: "unreviewed" | "favorite" | "approved" | "rejected";
 };
 type RecentJob = { id: string; status: string; provider: string; model: string; createdAt: string; presetName: string | null; presetVersion: string | null; counts: { completed: number; failed: number; queued: number; processing: number } };
+type ProjectFolder = { id: string; name: string; isArchived: boolean };
+type Project = { id: string; name: string; isArchived: boolean; folders: ProjectFolder[] };
 
 function statusChip(status: string) {
   const map: Record<string, string> = {
@@ -68,6 +70,9 @@ export default function DashboardPage() {
   const [reviewFilter, setReviewFilter] = useState<"all" | "favorite" | "approved" | "rejected">("all");
   const [reviewUpdatingId, setReviewUpdatingId] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState("");
+  const [folderId, setFolderId] = useState("");
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -85,6 +90,7 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadPresets();
     void fetch("/api/jobs/recent").then((r) => r.json()).then((d) => setRecentJobs(d.jobs ?? []));
+    void fetch("/api/projects").then((r) => r.json()).then((d) => setProjects(d.projects ?? []));
   }, [loadPresets]);
   const reloadManagerPresets = useCallback(async () => {
     setManagerLoading(true);
@@ -118,7 +124,7 @@ export default function DashboardPage() {
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, idempotencyKey, ...(aspectRatioTouched ? { aspectRatio } : {}), variationCount, quality })
+      body: JSON.stringify({ presetId, provider, model, singlePrompt, bulkPrompts, constraints, projectId: projectId || undefined, folderId: folderId || undefined, idempotencyKey, ...(aspectRatioTouched ? { aspectRatio } : {}), variationCount, quality })
     });
     const data = await res.json();
     if (res.ok) {
@@ -176,6 +182,8 @@ export default function DashboardPage() {
     setAspectRatio(appliedTemplate.aspectRatio);
     setAspectRatioTouched(appliedTemplate.aspectRatioTouched);
     setConstraints(appliedTemplate.constraints);
+    setProjectId(tpl.projectId ?? "");
+    setFolderId(tpl.folderId ?? "");
     if (appliedTemplate.variationCount) setVariationCount(appliedTemplate.variationCount);
     if (appliedTemplate.quality) setQuality(appliedTemplate.quality);
     if (tpl.presetSelectable && presets.find((p) => p.id === tpl.presetId)) setPresetId(tpl.presetId);
@@ -300,6 +308,8 @@ export default function DashboardPage() {
             <label className="grid gap-1 text-sm"><span className="font-medium">Aspect Ratio</span><select value={aspectRatio} onChange={(e) => { setAspectRatio(e.target.value); setAspectRatioTouched(true); }} className="rounded border p-2"><option value="1:1">Square 1:1</option><option value="2:3">Portrait 2:3</option><option value="4:6">Portrait 4:6</option><option value="4:3">Landscape 4:3</option><option value="3:2">Classic 3:2</option><option value="9:16">Vertical 9:16</option><option value="16:9">Widescreen 16:9</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Variations</span><select value={variationCount} onChange={(e) => setVariationCount(Number(e.target.value))} className="rounded border p-2"><option value={1}>1</option><option value={2}>2</option><option value={4}>4</option></select></label>
             <label className="grid gap-1 text-sm"><span className="font-medium">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="rounded border p-2">{getQualityOptionsForModel(provider as "openai" | "mock", model).map((q) => <option key={q} value={q}>{q}</option>)}</select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Project</span><select value={projectId} onChange={(e) => { setProjectId(e.target.value); setFolderId(""); }} className="rounded border p-2"><option value="">Unassigned</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+            <label className="grid gap-1 text-sm"><span className="font-medium">Folder</span><select value={folderId} onChange={(e) => setFolderId(e.target.value)} className="rounded border p-2" disabled={!projectId}><option value="">Unassigned</option>{(projects.find((p) => p.id === projectId)?.folders ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
           </div>
         </div>
 
