@@ -11,6 +11,7 @@ import { ReviewToolbar } from "@/components/studio/ReviewToolbar";
 import { CompareModal } from "@/components/studio/CompareModal";
 import { GalleryGrid } from "@/components/studio/GalleryGrid";
 import { EditPanel } from "@/components/studio/EditPanel";
+import { RecentJobsPanel } from "@/components/studio/RecentJobsPanel";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
@@ -407,25 +408,7 @@ export default function DashboardPage() {
           <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
         </section>
       )}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold">Recent Jobs</h2><p className="mt-1 text-xs text-slate-500">Duplicate copies settings into the form only. Re-run immediately creates a new job.</p>
-        {toast ? <p className="mt-2 text-sm text-emerald-700">{toast}</p> : null}
-        <div className="mt-3 grid gap-2">
-          {recentJobs.length === 0 ? <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">No jobs yet. Try Demo Mode with a sample prompt.</p> : recentJobs.map((j) => (
-            <div key={j.id} className={`rounded border p-2 text-sm flex items-center justify-between ${jobId===j.id?"border-blue-400 bg-blue-50":""}`}>
-              <div>
-                <p className="font-medium">{j.id.slice(0, 8)} · {statusChip(j.status)}</p>
-                <p className="text-slate-600">{j.presetName ?? "Unknown preset"} {j.presetVersion ? `(${j.presetVersion})` : ""} · {j.provider}/{j.model}</p>
-              </div>
-              <div className="flex gap-2">
-                <button className="rounded border border-slate-300 bg-white px-2 py-1" onClick={async () => { setJobId(j.id); await refreshJob(j.id); await refreshImages(j.id); }}>Open</button>
-                <button className="rounded border border-slate-300 bg-white px-2 py-1" disabled={rowLoadingId === j.id} onClick={() => duplicateJobIntoForm(j.id)}>{rowLoadingId === j.id ? "Loading..." : "Duplicate"}</button>
-                <button className="rounded bg-blue-600 px-2 py-1 text-white" disabled={rowLoadingId === j.id} onClick={() => rerunJobFromRow(j.id)}>{rowLoadingId === j.id ? "Loading..." : "Re-run"}</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
       {editSourceTask ? <EditPanel editSourceTask={editSourceTask} provider={provider} editInstruction={editInstruction} editConstraints={editConstraints} editSubmitting={editSubmitting} onEditInstructionChange={setEditInstruction} onEditConstraintsChange={setEditConstraints} onAppendChip={(chip) => setEditInstruction((c) => appendEditChip(c, chip))} onSubmitEdit={submitEdit} onClose={() => setEditSourceTask(null)} /> : null}
       <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
     </div></main>
