@@ -15,6 +15,7 @@ import { assertSupportedOpenAIModel, listSupportedOpenAIModels } from "@/lib/pro
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
 import { getCompatiblePresetDefaultQuality, resolveEffectiveQuality } from "@/lib/providers/model-quality";
 import { resolveFinalTaskSize } from "@/lib/jobs/task-size";
+import { resolveJobProjectFolderAssignment } from "@/lib/jobs/project-folder-assignment";
 
 const MAX_PROMPT_LINES = 50;
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
@@ -29,19 +30,8 @@ export async function POST(request: Request) {
     await seedPresetsFromConfig();
     const preset = await getPresetByStableKey(body.presetId);
     if (!preset) return NextResponse.json({ error: "Preset not found" }, { status: 400 });
-    let resolvedProjectId: string | null = body.projectId ?? null;
-    if (body.folderId) {
-      const folder = await prisma.projectFolder.findUnique({ where: { id: body.folderId } });
-      if (!folder) return NextResponse.json({ error: "Folder not found." }, { status: 400 });
-      if (folder.isArchived) return NextResponse.json({ error: "Archived folder cannot be used for new jobs." }, { status: 400 });
-      resolvedProjectId = folder.projectId;
-      if (body.projectId && folder.projectId !== body.projectId) return NextResponse.json({ error: "Folder must belong to selected project." }, { status: 400 });
-    }
-    if (resolvedProjectId) {
-      const project = await prisma.project.findUnique({ where: { id: resolvedProjectId } });
-      if (!project) return NextResponse.json({ error: "Project not found." }, { status: 400 });
-      if (project.isArchived) return NextResponse.json({ error: "Archived project cannot be used for new jobs." }, { status: 400 });
-    }
+    const assignment = await resolveJobProjectFolderAssignment({ projectId: body.projectId ?? null, folderId: body.folderId ?? null });
+    if (!assignment.ok) return NextResponse.json({ error: assignment.error }, { status: assignment.status });
 
     if (body.idempotencyKey) {
       const existing = await prisma.generationJob.findUnique({ where: { idempotencyKey: body.idempotencyKey } });
@@ -93,7 +83,7 @@ export async function POST(request: Request) {
         Array.from({ length: variationCount }, (_, index) => ({ subjectPrompt, variationIndex: index + 1 }))
       );
       job = await createJobAndTasksAtomic(prisma as never, {
-        jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey, projectId: resolvedProjectId, folderId: body.folderId ?? null },
+        jobData: { status: "queued", provider, model, idempotencyKey: body.idempotencyKey, projectId: assignment.projectId, folderId: assignment.folderId },
         taskData: taskPayloads.map(({ subjectPrompt, variationIndex }) => ({
             presetId: preset.stableKey,
             presetName: preset.name,

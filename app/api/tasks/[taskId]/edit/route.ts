@@ -9,6 +9,7 @@ import { resolveEffectiveQuality } from "@/lib/providers/model-quality";
 import { resolveProviderAndModel } from "@/lib/jobs/model-resolution";
 import { ensureJobProviderConfigured } from "@/lib/jobs/provider-config";
 import { getWorkerMaxAttempts } from "@/lib/jobs/worker-config";
+import { resolveJobProjectFolderAssignment } from "@/lib/jobs/project-folder-assignment";
 import { existsSync } from "node:fs";
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 
@@ -49,9 +50,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     const finalSize = sizeRes.finalSize as string;
     const finalQuality = resolveEffectiveQuality({ provider: provider as any, model, requestedQuality: body.quality ?? null, presetDefaultQuality: ((defaultParams as any).quality ?? null) as any });
     const variationCount = body.variationCount ?? 1;
+    const assignment = await resolveJobProjectFolderAssignment({ projectId: body.projectId ?? null, folderId: body.folderId ?? null });
+    if (!assignment.ok) return NextResponse.json({ error: assignment.error }, { status: assignment.status });
 
     const job = await createJobAndTasksAtomic(prisma as never, {
-      jobData: { status: "queued", mode: "edit", sourceJobId: sourceTask.jobId, sourceTaskId: sourceTask.id, editInstruction: body.editInstruction, provider, model, projectId: body.projectId ?? null, folderId: body.folderId ?? null },
+      jobData: { status: "queued", mode: "edit", sourceJobId: sourceTask.jobId, sourceTaskId: sourceTask.id, editInstruction: body.editInstruction, provider, model, projectId: assignment.projectId, folderId: assignment.folderId },
       taskData: Array.from({ length: variationCount }, (_, i) => ({
         presetId: preset.stableKey,
         presetName: preset.name,

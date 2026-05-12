@@ -4,6 +4,17 @@ import { POST } from "../app/api/tasks/[taskId]/edit/route.ts";
 import { prisma } from "../lib/db.ts";
 import { getWorkerMaxAttempts } from "../lib/jobs/worker-config.ts";
 
+function setupEditableSource() {
+  const o1 = prisma.generationTask.findUnique;
+  const o2 = prisma.preset.findUnique;
+  (prisma.generationTask as any).findUnique = async () => ({ id: "t1", status: "completed", outputPath: __filename, jobId: "j1" });
+  (prisma.preset as any).findUnique = async () => ({ stableKey: "p1", name: "Preset", isArchived: false, versions: [{ id: "pv1", version: "v1", stylePrompt: "style", defaultProvider: "mock", defaultModel: "mock-v1", defaultParamsJson: "{}" }] });
+  return () => {
+    (prisma.generationTask as any).findUnique = o1;
+    (prisma.preset as any).findUnique = o2;
+  };
+}
+
 test("edit route returns 404 for missing source task", async () => {
   const orig = prisma.generationTask.findUnique;
   (prisma.generationTask as any).findUnique = async () => null;
@@ -21,11 +32,12 @@ test("edit route rejects non-completed task", async () => {
 });
 
 test("edit route creates edit job in mock mode", async () => {
-  const o1 = prisma.generationTask.findUnique;
-  const o2 = prisma.preset.findUnique;
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  const op = prisma.project.findUnique;
   const o3 = prisma.$transaction;
-  (prisma.generationTask as any).findUnique = async () => ({ id: "t1", status: "completed", outputPath: __filename, jobId: "j1" });
-  (prisma.preset as any).findUnique = async () => ({ stableKey: "p1", name: "Preset", isArchived: false, versions: [{ id: "pv1", version: "v1", stylePrompt: "style", defaultProvider: "mock", defaultModel: "mock-v1", defaultParamsJson: "{}" }] });
+  (prisma.projectFolder as any).findUnique = async () => null;
+  (prisma.project as any).findUnique = async () => null;
   (prisma as any).$transaction = async (fn: any) => {
     const taskRows: any[] = [];
     const out = await fn({ generationJob: { create: async ({ data }: any) => ({ id: "j2", ...data }) }, generationTask: { createMany: async ({ data }: any) => { taskRows.push(...data); return {}; } } });
@@ -38,7 +50,48 @@ test("edit route creates edit job in mock mode", async () => {
   assert.equal(rows.length, 2);
   assert.equal(JSON.parse(rows[0].requestPayloadJson).metadata.mode, "edit");
   assert.equal(rows[0].maxAttempts, getWorkerMaxAttempts());
-  (prisma.generationTask as any).findUnique = o1;
-  (prisma.preset as any).findUnique = o2;
+  restore();
+  (prisma.projectFolder as any).findUnique = of;
+  (prisma.project as any).findUnique = op;
   (prisma as any).$transaction = o3;
+});
+
+test("edit route rejects archived folder assignment", async () => {
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "p1", isArchived: true });
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", editInstruction: "white bg", folderId: "f1" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Archived folder cannot be used for new jobs.");
+  (prisma.projectFolder as any).findUnique = of;
+  restore();
+});
+
+test("edit route infers project from folder", async () => {
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  const op = prisma.project.findUnique;
+  const ot = prisma.$transaction;
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "p1", isArchived: false });
+  (prisma.project as any).findUnique = async () => ({ id: "p1", isArchived: false });
+  (prisma as any).$transaction = async (fn: any) => fn({ generationJob: { create: async ({ data }: any) => ({ id: "j2", ...data }) }, generationTask: { createMany: async () => ({}) } });
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", editInstruction: "white bg", folderId: "f1" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 200);
+  const payload = await res.json();
+  assert.ok(payload.jobId);
+  (prisma.projectFolder as any).findUnique = of;
+  (prisma.project as any).findUnique = op;
+  (prisma as any).$transaction = ot;
+  restore();
+});
+
+test("edit route rejects mismatched project/folder", async () => {
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "p1", isArchived: false });
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", editInstruction: "white bg", folderId: "f1", projectId: "p2" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Folder must belong to selected project.");
+  (prisma.projectFolder as any).findUnique = of;
+  restore();
 });
