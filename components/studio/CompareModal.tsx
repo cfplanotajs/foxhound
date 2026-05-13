@@ -1,4 +1,5 @@
 import { buttonSecondary, card, helperText, sectionHeader } from "./ui";
+import { AssetImage } from "./AssetImage";
 
 type CompareTask = { sourceTaskId?: string | null; imageUrl: string | null; editInstruction?: string | null };
 
@@ -17,11 +18,11 @@ export function CompareModal({ task, sourceUrl, onClose }: { task: CompareTask |
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Original</p>
-            <img src={sourceUrl} alt="original" className="h-72 w-full rounded-xl border border-slate-200 object-cover" />
+            <div className="relative h-72 w-full overflow-hidden rounded-xl border border-slate-200"><AssetImage src={sourceUrl} alt="original" fill className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" /></div>
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Edited result</p>
-            <img src={task.imageUrl ?? ""} alt="edited result" className="h-72 w-full rounded-xl border border-slate-200 object-cover" />
+            <div className="relative h-72 w-full overflow-hidden rounded-xl border border-slate-200"><AssetImage src={task.imageUrl ?? ""} alt="edited result" fill className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" /></div>
           </div>
         </div>
       </div>
