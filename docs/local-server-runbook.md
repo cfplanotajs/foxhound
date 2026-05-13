@@ -7,6 +7,7 @@
 - **Both processes must be running** for queued jobs to process.
 - Generated images are stored on disk (default `./generated`, or `FOXHOUND_STORAGE_DIR` if set).
 - SQLite stores jobs, tasks, presets, projects/folders, and metadata.
+- Pilot validation checklist: `docs/pilot-checklist.md`.
 - Quick copy/paste command reference: `docs/operator-quick-commands.md`.
 - Incident handoff form: `docs/incident-handoff-template.md`.
 

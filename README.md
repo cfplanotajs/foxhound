@@ -220,6 +220,7 @@ pm2 stop foxhound-web foxhound-worker
 ## Operations runbook
 - For installation, update/restart flow, backup/restore, and incident response, use:
   - `docs/local-server-runbook.md`
+  - `docs/pilot-checklist.md`
   - `docs/operator-quick-commands.md`
   - `docs/incident-handoff-template.md`
   - `docs/systemd-examples.md` (optional Linux service examples)
