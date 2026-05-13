@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { toClientTaskDto } from "@/lib/jobs/image-dto";
@@ -21,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     });
     return NextResponse.json({ task: toClientTaskDto(task as never) });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+    if ((error as { code?: string })?.code === "P2025") {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

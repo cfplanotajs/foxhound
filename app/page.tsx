@@ -329,40 +329,48 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
-      <div className="mx-auto max-w-7xl space-y-6 p-6"><HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} />
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+        <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} />
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="space-y-6">
+            <section className="grid gap-6 lg:grid-cols-2">
+              <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
+              <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
+            </section>
 
-        <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
-      </section>
+            {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
-      
-      {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
-
-      {jobId && (
-        <section className="rounded-2xl bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">Job Summary</h2>
-              <p className="text-sm text-slate-600">Job ID: {jobId}</p>
-              <p className="text-sm text-slate-600">Status: {jobStatus}</p>
-              <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
-            </div>
-            <div className="flex gap-2">
-              <button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => refreshJob()}>Refresh Status</button>
-              <button className="rounded bg-slate-700 px-3 py-2 text-white" onClick={() => refreshImages()}>Refresh Gallery</button>
-              <button className="rounded bg-emerald-700 px-3 py-2 text-white" onClick={downloadZip}>Download ZIP</button>
-              <button className="rounded bg-emerald-900 px-3 py-2 text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
-            </div>
+            {jobId && (
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">Gallery & Review</h2>
+                    <p className="text-sm text-slate-600">Job ID: {jobId}</p>
+                    <p className="text-sm text-slate-600">Status: {jobStatus}</p>
+                    <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
+                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshImages()}>Refresh Gallery</button>
+                    <button className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={downloadZip}>Download ZIP</button>
+                    <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
+                  </div>
+                </div>
+                <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} />
+                <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
+              </section>
+            )}
           </div>
-          <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} />
-          <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
+
+          <aside className="space-y-6">
+            <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
+          </aside>
         </section>
-      )}
-      <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
-      {editSourceTask ? <EditPanel editSourceTask={editSourceTask} provider={provider} editInstruction={editInstruction} editConstraints={editConstraints} editSubmitting={editSubmitting} onEditInstructionChange={setEditInstruction} onEditConstraintsChange={setEditConstraints} onAppendChip={(chip) => setEditInstruction((c) => appendEditChip(c, chip))} onSubmitEdit={submitEdit} onClose={() => setEditSourceTask(null)} /> : null}
-      <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
-    </div></main>
+
+        {editSourceTask ? <EditPanel editSourceTask={editSourceTask} provider={provider} editInstruction={editInstruction} editConstraints={editConstraints} editSubmitting={editSubmitting} onEditInstructionChange={setEditInstruction} onEditConstraintsChange={setEditConstraints} onAppendChip={(chip) => setEditInstruction((c) => appendEditChip(c, chip))} onSubmitEdit={submitEdit} onClose={() => setEditSourceTask(null)} /> : null}
+        <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
+      </div>
+    </main>
   );
 }
