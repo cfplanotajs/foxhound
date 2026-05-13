@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
 import { isPresetManageValidationError, normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
@@ -6,7 +7,7 @@ import { parseJsonBody } from "@/lib/jobs/json-body";
 
 
 async function createNextPresetVersionWithRetry(input: {
-  db: typeof prisma;
+  db: Prisma.TransactionClient | typeof prisma;
   presetId: string;
   stylePrompt: string;
   provider: "openai" | "mock";
@@ -109,10 +110,10 @@ export async function POST(request: Request) {
       const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
-      const versionResult = await prisma.$transaction(async (tx: typeof prisma) => {
+      const versionResult = await prisma.$transaction(async (tx) => {
         await tx.preset.update({ where: { id: preset.id }, data: { name, description, bestUseLabel } });
         return createNextPresetVersionWithRetry({
-          db: tx as typeof prisma,
+          db: tx,
           presetId: preset.id,
           stylePrompt,
           provider,
