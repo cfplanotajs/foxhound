@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
+    "migrate:deploy": "prisma migrate deploy",
     "test": "node --import=tsx --test tests/**/*.test.ts",
     "worker": "tsx scripts/worker.ts",
     "presets:seed": "tsx scripts/seed-presets.ts",

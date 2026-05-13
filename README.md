@@ -25,7 +25,7 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
    - `DATABASE_URL` (required)
    - `OPENAI_API_KEY` (optional for Demo Mode, required for OpenAI mode)
    - `OPENAI_IMAGE_MODEL` (optional model override)
-   - `OPENAI_EDIT_ADAPTER` (optional, `responses` or `images`)
+   - `OPENAI_EDIT_ADAPTER` (optional, `responses` or `images_edit`)
    - `FOXHOUND_STORAGE_DIR` (optional; leave blank for default `./generated`)
    - worker tuning envs are optional and have safe defaults
 4. Initialize database and presets:
@@ -179,6 +179,10 @@ npm run prisma:generate
 - Prisma migrations are committed in `prisma/migrations`.
 - Run the worker alongside the web server in all environments.
 - If concurrency grows beyond light internal usage, SQLite may become a bottleneck and PostgreSQL should be evaluated later.
+
+## Operations runbook
+- For installation, update/restart flow, backup/restore, and incident response, use:
+  - `docs/local-server-runbook.md`
 
 ## Demo readiness checklist
 - `npm run verify` passes.
