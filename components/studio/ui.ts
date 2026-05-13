@@ -23,3 +23,5 @@ export const emptyState = "rounded-xl border border-slate-200 bg-slate-50 p-4 te
 export const selectedRow = "border-blue-300 bg-blue-50";
 export const warningSurface = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700";
 export const errorSurface = "rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700";
+
+export const chipSoft = "rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100";
