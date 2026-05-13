@@ -94,6 +94,9 @@ export default function DashboardPage() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [compareTask, setCompareTask] = useState<JobTask | null>(null);
   const [compareOpened, setCompareOpened] = useState(false);
+  const [showNextTip, setShowNextTip] = useState(true);
+  const [showChecklistTip, setShowChecklistTip] = useState(true);
+  const [showGalleryTip, setShowGalleryTip] = useState(true);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -336,6 +339,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} steps={workflow.steps.map((s) => ({ label: s.label, state: s.state }))} nextAction={workflow.nextAction} />
+        {(!showNextTip && !showChecklistTip && !showGalleryTip) ? <div className="-mt-3"><button className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600" onClick={() => { setShowNextTip(true); setShowChecklistTip(true); setShowGalleryTip(true); }}>Show tips</button></div> : null}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="space-y-6">
@@ -344,7 +348,7 @@ export default function DashboardPage() {
               <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
             </section>
 
-            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><p className="mt-1 text-sm font-semibold text-blue-900">{workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Hint: {workflow.nextActionHint}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section>{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            {showNextTip ? <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><button className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => setShowNextTip(false)}>Dismiss</button></div><p className="mt-1 text-sm font-semibold text-blue-900">Next up: {workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Try this: {workflow.nextActionHint}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section> : null}{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -356,7 +360,7 @@ export default function DashboardPage() {
                     <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
                     {workflow.isProcessing ? <p className="text-sm text-indigo-700">Worker is creating your images… If this stays here, make sure the worker is running.</p> : null}
                     {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
-                    {workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}
+                    {showGalleryTip ? <><div className="mt-1"><button className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600" onClick={() => setShowGalleryTip(false)}>Hide tips</button></div>{workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}</> : null}
                   </div>
                   <div className={`flex flex-wrap gap-2 ${workflow.focusKey === "export" ? "rounded-xl ring-1 ring-emerald-200 p-1" : ""}`}>
                     <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
@@ -366,13 +370,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
-                <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
+                <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} />
               </section>
             )}
           </div>
 
           <aside className="space-y-6">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Checklist</p><div className="mt-2 grid gap-1 text-sm">{[["Generate variations", workflow.checklist.generated],["Edit one result", workflow.checklist.edited],["Compare original and edited", workflow.checklist.compared],["Approve one image", workflow.checklist.approved],["Download approved ZIP", workflow.checklist.exported]].map(([label, done]) => <p key={String(label)} className={done ? "text-emerald-700" : "text-slate-500"}>{done ? "✓" : "○"} {label}</p>)}</div></section><RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
+            {showChecklistTip ? <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Checklist</p><button className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600" onClick={() => setShowChecklistTip(false)}>Dismiss</button></div><div className="mt-2 grid gap-1 text-sm">{[["Generate variations", workflow.checklist.generated],["Edit one result", workflow.checklist.edited],["Compare original and edited", workflow.checklist.compared],["Approve one image", workflow.checklist.approved],["Download approved ZIP", workflow.checklist.exported]].map(([label, done], idx) => <p key={String(label)} className={done ? "rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700" : idx===1 && !workflow.checklist.edited ? "rounded-md bg-blue-50 px-2 py-1 text-blue-700" : "px-2 py-1 text-slate-500"}>{done ? "✓" : "○"} {label}</p>)}</div></section> : null}<RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
           </aside>
         </section>
 
