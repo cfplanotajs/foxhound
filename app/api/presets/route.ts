@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { getActivePresets, seedPresetsFromConfig } from "@/lib/presets";
 import { getEnv } from "@/lib/env";
 import { normalizePresetDefaultsForModel } from "@/lib/presets/defaults-normalizer";
+import { resolveEffectiveOpenAIModel } from "@/lib/presets/effective-openai-model";
 
 export async function GET() {
   try {
     await seedPresetsFromConfig();
     const presets = await getActivePresets();
-    const envModel = getEnv().OPENAI_IMAGE_MODEL?.trim();
+    const envModel = getEnv().OPENAI_IMAGE_MODEL;
     const normalized = presets.map((preset) => {
-      const effectiveModel = preset.defaultProvider === "openai" && envModel ? envModel : preset.defaultModel;
+      const effectiveModel = preset.defaultProvider === "openai"
+        ? resolveEffectiveOpenAIModel(preset.defaultModel, envModel)
+        : preset.defaultModel;
       const defaultParams = normalizePresetDefaultsForModel({
         provider: preset.defaultProvider,
         model: effectiveModel,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { POST as createProject } from "../app/api/projects/route.ts";
 import { POST as createFolder } from "../app/api/projects/[projectId]/folders/route.ts";
 import { POST as archiveProject } from "../app/api/projects/[projectId]/archive/route.ts";
+import { POST as archiveFolder } from "../app/api/projects/[projectId]/folders/[folderId]/archive/route.ts";
 import { prisma } from "../lib/db.ts";
 
 test("create project succeeds with valid name", async () => {
@@ -75,4 +76,39 @@ test("archive and unarchive existing project succeeds", async () => {
   assert.equal(a.status, 200);
   assert.equal(b.status, 200);
   (prisma.project as any).update = ou;
+});
+
+
+test("folder archive malformed JSON returns 400", async () => {
+  const res = await archiveFolder(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Malformed JSON request body.");
+});
+
+test("folder archive and unarchive succeeds", async () => {
+  const ofind = prisma.projectFolder.findUnique;
+  const oupdate = prisma.projectFolder.update;
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "p1" });
+  (prisma.projectFolder as any).update = async () => ({ id: "f1" });
+
+  const a = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: true }) }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  const b = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: false }) }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  assert.equal(a.status, 200);
+  assert.equal(b.status, 200);
+
+  (prisma.projectFolder as any).findUnique = ofind;
+  (prisma.projectFolder as any).update = oupdate;
+});
+
+test("folder archive returns 404 for missing folder or mismatched project", async () => {
+  const ofind = prisma.projectFolder.findUnique;
+  (prisma.projectFolder as any).findUnique = async () => null;
+  const missing = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: true }) }), { params: Promise.resolve({ projectId: "p1", folderId: "missing" }) });
+  assert.equal(missing.status, 404);
+
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "other" });
+  const mismatch = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: true }) }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  assert.equal(mismatch.status, 404);
+
+  (prisma.projectFolder as any).findUnique = ofind;
 });

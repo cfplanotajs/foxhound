@@ -4,6 +4,13 @@ import { GET, POST } from "../app/api/presets/manage/route.ts";
 import { prisma } from "../lib/db.ts";
 import { hashPresetContent } from "../lib/presets.ts";
 
+
+
+test("manage POST returns 400 for malformed JSON body", async () => {
+  const res = await POST(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Malformed JSON request body.");
+});
 test("manage GET returns stableKey for active and archived lists", async () => {
   const orig = prisma.preset.findMany;
   (prisma.preset as any).findMany = async () => ([

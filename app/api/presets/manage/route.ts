@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
 import { isPresetManageValidationError, normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 
 
 async function createNextPresetVersionWithRetry(input: {
@@ -62,8 +63,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const action = body?.action as string;
+    const parsedBody = await parseJsonBody(request);
+    if (!parsedBody.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const body = parsedBody.data as Record<string, unknown>;
+    const action = typeof body.action === "string" ? body.action : "";
+    const description = typeof body.description === "string" ? body.description : "";
+    const bestUseLabel = typeof body.bestUseLabel === "string" ? body.bestUseLabel : null;
+    const samplePrompt = typeof body.samplePrompt === "string" ? body.samplePrompt : null;
 
     if (action === "create") {
       const { provider, defaultModel } = normalizePresetProviderModel({ defaultProvider: body.defaultProvider, defaultModel: body.defaultModel });
@@ -74,8 +80,8 @@ export async function POST(request: Request) {
         data: {
           stableKey: validatePresetStableKey(body.stableKey),
           name,
-          description: body.description ?? "",
-          bestUseLabel: body.bestUseLabel ?? null,
+          description,
+          bestUseLabel,
           isArchived: false,
           versions: {
             create: {
@@ -84,8 +90,8 @@ export async function POST(request: Request) {
               defaultProvider: provider,
               defaultModel,
               defaultParamsJson: JSON.stringify(defaultParams),
-              samplePrompt: body.samplePrompt ?? null,
-              contentHash: hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null })
+              samplePrompt,
+              contentHash: hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt })
             }
           }
         }
@@ -100,11 +106,11 @@ export async function POST(request: Request) {
       const name = requiredText(body.name, "Preset name is required.");
       const stylePrompt = requiredText(body.stylePrompt, "Style prompt is required.");
       const defaultParams = normalizePresetDefaultParams({ provider, model: defaultModel, defaultParams: parseDefaultParams(body.defaultParams) });
-      const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt: body.samplePrompt ?? null });
+      const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
       const versionResult = await prisma.$transaction(async (tx) => {
-        await tx.preset.update({ where: { id: preset.id }, data: { name, description: body.description ?? "", bestUseLabel: body.bestUseLabel ?? null } });
+        await tx.preset.update({ where: { id: preset.id }, data: { name, description, bestUseLabel } });
         return createNextPresetVersionWithRetry({
           db: tx as typeof prisma,
           presetId: preset.id,
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
           provider,
           defaultModel,
           defaultParams,
-          samplePrompt: body.samplePrompt ?? null,
+          samplePrompt,
           contentHash
         });
       });
@@ -121,9 +127,10 @@ export async function POST(request: Request) {
     }
 
     if (action === "duplicate") {
+      const sourceStableKey = validatePresetStableKey(body.stableKey);
       const newStableKey = validatePresetStableKey(body.newStableKey);
       const newName = requiredText(body.newName, "Preset name is required.");
-      const source = await prisma.preset.findUnique({ where: { stableKey: body.stableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
+      const source = await prisma.preset.findUnique({ where: { stableKey: sourceStableKey }, include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } } });
       if (!source || !source.versions[0]) return NextResponse.json({ error: "Preset not found" }, { status: 404 });
       const latest = source.versions[0];
       const defaultParams = JSON.parse(latest.defaultParamsJson ?? "{}") as Record<string, unknown>;

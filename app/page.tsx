@@ -17,7 +17,7 @@ import { PromptComposer } from "@/components/studio/PromptComposer";
 import { PresetManagerPanel } from "@/components/studio/PresetManagerPanel";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
-type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean };
+type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean; bestUseLabel?: string | null; defaultProvider?: string; defaultModel?: string };
 type TaskStatus = "queued" | "processing" | "completed" | "failed";
 type JobTask = {
   id: string;
