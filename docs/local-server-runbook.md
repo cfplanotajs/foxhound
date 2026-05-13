@@ -81,6 +81,7 @@ Verification:
 
 ```bash
 npm run verify
+npm run health:check
 ```
 
 Live demo mode:
@@ -105,6 +106,14 @@ Expected healthy response shape:
 
 If DB or storage checks fail, endpoint returns HTTP `503` with safe JSON.
 
+Script helper:
+
+```bash
+npm run health:check
+# optional URL override
+FOXHOUND_HEALTH_URL=http://localhost:3000/api/health npm run health:check
+```
+
 ## 5b) Optional PM2 process management
 PM2 is optional and not required for local development.
 
@@ -114,6 +123,7 @@ npm run migrate:deploy
 pm2 start ecosystem.config.cjs
 pm2 status
 pm2 logs
+pm2 restart all
 pm2 restart foxhound-web foxhound-worker
 pm2 stop foxhound-web foxhound-worker
 ```
@@ -123,6 +133,20 @@ pm2 stop foxhound-web foxhound-worker
 - The examples must be adapted for actual `WorkingDirectory`, `User`, and `EnvironmentFile`.
 
 ## 6) Backup and restore
+
+Optional script helper:
+
+```bash
+npm run backup
+```
+
+What script backup includes:
+1. SQLite DB copy/backup
+2. Generated assets folder (`FOXHOUND_STORAGE_DIR` or default `generated`)
+3. `config/presets.json` when present
+
+What script backup excludes:
+- `.env` (back up separately and securely)
 
 ### What to back up
 Back up these together for a full restore:
@@ -161,6 +185,12 @@ Copy-Item .\generated .\backups\generated -Recurse -Force
 Copy-Item .\.env .\backups\.env
 ```
 
+Windows health check:
+
+```powershell
+npm run health:check
+```
+
 ### Restore procedure
 1. Stop web server and worker.
 2. Restore database file.
@@ -168,13 +198,14 @@ Copy-Item .\.env .\backups\.env
 4. Restore `.env` if needed.
 5. Start web server and worker.
    - Or restart PM2/systemd services if using a service manager.
+   - If using PM2: `pm2 restart all`
 6. Smoke test:
    - open dashboard
    - load recent jobs
    - open a completed image
    - run one Demo Mode generation
    - download ZIP
-   - verify health endpoint returns HTTP 200 (`/api/health`)
+   - verify health endpoint returns HTTP 200 (`/api/health`) or run `npm run health:check`
 
 ## 7) Incident checklist
 

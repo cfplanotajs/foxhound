@@ -65,7 +65,20 @@ npm run worker
 Health check:
 ```bash
 curl http://localhost:3000/api/health
+npm run health:check
 ```
+
+Backup helper:
+```bash
+npm run backup
+```
+Includes:
+- SQLite DB backup
+- generated assets folder (or `FOXHOUND_STORAGE_DIR` if set)
+- `config/presets.json` when present
+
+Excludes:
+- `.env` (back up separately and securely)
 
 ## Stakeholder demo script
 ### One-minute overview
@@ -192,6 +205,7 @@ npm run migrate:deploy
 pm2 start ecosystem.config.cjs
 pm2 status
 pm2 logs
+pm2 restart all
 pm2 restart foxhound-web foxhound-worker
 pm2 stop foxhound-web foxhound-worker
 ```
