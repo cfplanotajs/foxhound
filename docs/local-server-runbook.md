@@ -90,6 +90,38 @@ npm run dev
 npm run worker
 ```
 
+Health endpoint:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+Expected healthy response shape:
+- `status: "ok"`
+- `app: "foxhound"`
+- `timestamp`
+- `database: "ok"`
+- `storage: "ok"`
+
+If DB or storage checks fail, endpoint returns HTTP `503` with safe JSON.
+
+## 5b) Optional PM2 process management
+PM2 is optional and not required for local development.
+
+```bash
+npm run build
+npm run migrate:deploy
+pm2 start ecosystem.config.cjs
+pm2 status
+pm2 logs
+pm2 restart foxhound-web foxhound-worker
+pm2 stop foxhound-web foxhound-worker
+```
+
+## 5c) Optional systemd setup
+- See `docs/systemd-examples.md`.
+- The examples must be adapted for actual `WorkingDirectory`, `User`, and `EnvironmentFile`.
+
 ## 6) Backup and restore
 
 ### What to back up
@@ -135,12 +167,14 @@ Copy-Item .\.env .\backups\.env
 3. Restore generated image directory.
 4. Restore `.env` if needed.
 5. Start web server and worker.
+   - Or restart PM2/systemd services if using a service manager.
 6. Smoke test:
    - open dashboard
    - load recent jobs
    - open a completed image
    - run one Demo Mode generation
    - download ZIP
+   - verify health endpoint returns HTTP 200 (`/api/health`)
 
 ## 7) Incident checklist
 
@@ -177,6 +211,11 @@ Copy-Item .\.env .\backups\.env
 - For server updates, run `npm run migrate:deploy`.
 - Ensure migrations exist in `prisma/migrations`.
 
+### Health endpoint reports 503
+- Check DB connectivity first (`DATABASE_URL`, file presence, lock state).
+- Check storage directory write/read permissions.
+- Retry after fixing DB/storage and restarting web app if needed.
+
 ### Database locked
 - Ensure only expected processes access SQLite.
 - Avoid long-running external DB tools holding locks.
@@ -200,3 +239,13 @@ Copy-Item .\.env .\backups\.env
 6. Edit the best result.
 7. Mark results as approved/favorite/rejected.
 8. Download approved ZIP.
+
+## 9) Rollback basics
+If an update causes operational issues:
+1. Stop web and worker (or PM2/systemd services).
+2. Restore last known-good backup of:
+   - SQLite DB file
+   - generated assets directory
+   - `.env` if changed
+3. Restart services.
+4. Check `/api/health` and run a short smoke test.

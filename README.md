@@ -62,6 +62,11 @@ Terminal 2:
 npm run worker
 ```
 
+Health check:
+```bash
+curl http://localhost:3000/api/health
+```
+
 ## Stakeholder demo script
 ### One-minute overview
 Foxhound helps designers create, edit, review, and export consistent visual assets from studio presets.
@@ -180,9 +185,21 @@ npm run prisma:generate
 - Run the worker alongside the web server in all environments.
 - If concurrency grows beyond light internal usage, SQLite may become a bottleneck and PostgreSQL should be evaluated later.
 
+### Optional PM2 process management
+```bash
+npm run build
+npm run migrate:deploy
+pm2 start ecosystem.config.cjs
+pm2 status
+pm2 logs
+pm2 restart foxhound-web foxhound-worker
+pm2 stop foxhound-web foxhound-worker
+```
+
 ## Operations runbook
 - For installation, update/restart flow, backup/restore, and incident response, use:
   - `docs/local-server-runbook.md`
+  - `docs/systemd-examples.md` (optional Linux service examples)
 
 ## Demo readiness checklist
 - `npm run verify` passes.
