@@ -12,10 +12,10 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
 - Prisma + SQLite
 - OpenAI image generation API
 
-## Setup
+## Setup (fresh machine)
 1. Install dependencies:
    ```bash
-   npm install
+   npm ci
    ```
 2. Create env file:
    ```bash
@@ -24,15 +24,22 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
 3. Configure `.env`:
    - `DATABASE_URL` (required)
    - `OPENAI_API_KEY` (optional for Demo Mode, required for OpenAI mode)
-   - `OPENAI_IMAGE_MODEL` (optional override for default OpenAI image model)
+   - `OPENAI_IMAGE_MODEL` (optional model override)
+   - `OPENAI_EDIT_ADAPTER` (optional, `responses` or `images`)
+   - `FOXHOUND_STORAGE_DIR` (optional; leave blank for default `./generated`)
+   - worker tuning envs are optional and have safe defaults
 4. Initialize database and presets:
    ```bash
    npm run prisma:generate
    npm run prisma:migrate
    npm run presets:seed
    ```
+5. Validate everything before demoing:
+   ```bash
+   npm run verify
+   ```
 
-## Run locally
+## Run locally (development)
 Terminal 1:
 ```bash
 npm run dev
@@ -43,19 +50,32 @@ Terminal 2:
 npm run worker
 ```
 
-## Demo script (stakeholder-ready)
-1. Open dashboard and choose **Demo Mode (Mock)**.
-2. Pick an active preset.
-3. Choose aspect ratio, variation count, and quality.
-4. Click a sample prompt chip (or type one).
-5. Submit job and wait for worker to process.
-6. Review outputs in gallery using **Favorite / Approved / Rejected**.
-7. Filter gallery with review chips (All/Favorites/Approved/Rejected).
-8. Download ZIP from current job summary.
-9. In Recent Jobs:
-   - **Open** to inspect a job.
-   - **Duplicate** to copy settings back to form (does not submit).
-   - **Re-run** to immediately create a new job.
+## Run locally (production-ish server mode)
+Terminal 1:
+```bash
+npm run build
+npm run start
+```
+
+Terminal 2:
+```bash
+npm run worker
+```
+
+## Stakeholder demo script
+### One-minute overview
+Foxhound helps designers create, edit, review, and export consistent visual assets from studio presets.
+
+### Demo flow
+1. Start app + worker (`npm run dev` and `npm run worker`).
+2. Select **Demo Mode (Mock)**.
+3. Pick a preset.
+4. Generate multiple variations.
+5. Mark one result as **Approved** (or **Favorite**).
+6. Edit that result with instruction like: `white background, clean artifacts`.
+7. Use **Compare** to review original vs edited output.
+8. Download **Approved ZIP**.
+9. If API key and credits are available, switch provider to **OpenAI** and repeat generate/edit.
 
 ## Demo Mode vs OpenAI mode
 - **Demo Mode (mock)**
@@ -66,6 +86,21 @@ npm run worker
   - requires server-side `OPENAI_API_KEY`
   - never use `NEXT_PUBLIC_OPENAI_API_KEY`
   - model/size/quality are validated server-side
+  - if account billing or credits are unavailable, requests may fail safely with actionable error messaging
+
+## Storage and output paths
+- Generated images are stored on local disk.
+- Default base directory: `./generated` (repo-relative), with per-job subfolders.
+- Optional override: set `FOXHOUND_STORAGE_DIR` in `.env` to change the base directory for local server deployments.
+- Existing files are not moved automatically when changing storage dir.
+
+## Troubleshooting
+- **Jobs stay queued / nothing processes:** ensure `npm run worker` is running in a separate terminal.
+- **Prisma client/migrations errors:** run `npm run prisma:generate` and `npm run prisma:migrate`.
+- **OpenAI provider setup error:** set `OPENAI_API_KEY` in `.env` (server-side only).
+- **OpenAI billing/credits failures:** use Demo Mode or add credits/enable billing in OpenAI account.
+- **Missing image file errors:** output file may have been removed from disk; re-run the job.
+- **Approved ZIP returns empty/400:** mark at least one image as Approved before using approved-only download.
 
 ## Tests
 Run:
@@ -137,3 +172,19 @@ npm run prisma:generate
 - `next typegen` is not available as a stable CLI command in this project setup, so use:
   - `npm run verify`
   - or `npm run prisma:generate && npm test && npm run lint && npm run build && npm run typecheck`
+
+## Migration / deployment notes
+- Local dev migration flow uses `prisma migrate dev` (provided via `npm run prisma:migrate`).
+- Server/staging/production should use `prisma migrate deploy`.
+- Prisma migrations are committed in `prisma/migrations`.
+- Run the worker alongside the web server in all environments.
+- If concurrency grows beyond light internal usage, SQLite may become a bottleneck and PostgreSQL should be evaluated later.
+
+## Demo readiness checklist
+- `npm run verify` passes.
+- App starts (`npm run dev` or `npm run start` after build).
+- Worker starts (`npm run worker`).
+- Demo Mode generate works.
+- Demo Mode edit works.
+- ZIP download works (including approved-only ZIP with approved images).
+- OpenAI generate/edit works when key and credits are available.
