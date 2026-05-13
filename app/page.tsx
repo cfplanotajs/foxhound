@@ -93,6 +93,7 @@ export default function DashboardPage() {
   const [editConstraints, setEditConstraints] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [compareTask, setCompareTask] = useState<JobTask | null>(null);
+  const [compareOpened, setCompareOpened] = useState(false);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -329,7 +330,7 @@ export default function DashboardPage() {
   };
 
 
-  const workflow = getStudioWorkflow({ presetId, singlePrompt, bulkPrompts, jobId, tasks });
+  const workflow = getStudioWorkflow({ presetId, singlePrompt, bulkPrompts, jobId, tasks, compareOpened });
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
@@ -338,12 +339,12 @@ export default function DashboardPage() {
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="space-y-6">
-            <section className="grid gap-6 lg:grid-cols-2">
+            <section className={`grid gap-6 lg:grid-cols-2 ${workflow.focusKey === "generate" ? "rounded-2xl ring-1 ring-blue-200 p-2" : ""}`}>
               <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
               <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
             </section>
 
-            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><p className="mt-1 text-sm font-semibold text-blue-900">{workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p></section>{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><p className="mt-1 text-sm font-semibold text-blue-900">{workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Hint: {workflow.nextActionHint}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section>{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -357,14 +358,14 @@ export default function DashboardPage() {
                     {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
                     {workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className={`flex flex-wrap gap-2 ${workflow.focusKey === "export" ? "rounded-xl ring-1 ring-emerald-200 p-1" : ""}`}>
                     <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
                     <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshImages()}>Refresh Gallery</button>
                     <button className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={downloadZip}>Download ZIP</button>
                     <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
                   </div>
                 </div>
-                <ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} />
+                <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
                 <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={setCompareTask} updateReview={updateReview} statusChip={statusChip} />
               </section>
             )}
