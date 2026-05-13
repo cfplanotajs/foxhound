@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 
 function toStableKey(input: string) { return input.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_"); }
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   try {
     const { projectId } = await params;
-    const body = await request.json();
+    const parsed = await parseJsonBody(request);
+    if (!parsed.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const body = parsed.data as { name?: unknown; stableKey?: unknown; description?: string };
     const name = String(body?.name ?? "").trim();
     if (!name) return NextResponse.json({ error: "Folder name is required." }, { status: 400 });
     const project = await prisma.project.findUnique({ where: { id: projectId } });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { parseJsonBody } from "@/lib/jobs/json-body";
 
 function toStableKey(input: string) { return input.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_"); }
 
@@ -16,7 +17,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const parsed = await parseJsonBody(request);
+    if (!parsed.ok) return NextResponse.json({ error: "Malformed JSON request body." }, { status: 400 });
+    const body = parsed.data as { name?: unknown; stableKey?: unknown; description?: string };
     const name = String(body?.name ?? "").trim();
     if (!name) return NextResponse.json({ error: "Project name is required." }, { status: 400 });
     const stableKey = toStableKey(String(body?.stableKey || name));

@@ -21,6 +21,12 @@ test("create project requires non-blank name", async () => {
   assert.equal((await res.json()).error, "Project name is required.");
 });
 
+test("create project returns 400 for malformed JSON body", async () => {
+  const res = await createProject(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Malformed JSON request body.");
+});
+
 test("create project maps duplicate stableKey conflicts to 400", async () => {
   const orig = prisma.project.create;
   (prisma.project as any).create = async () => { const err = new Error("dup") as any; err.code = "P2002"; throw err; };
@@ -28,6 +34,18 @@ test("create project maps duplicate stableKey conflicts to 400", async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, "Project stableKey already exists.");
   (prisma.project as any).create = orig;
+});
+
+test("create folder returns 400 for malformed JSON body", async () => {
+  const res = await createFolder(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }), { params: Promise.resolve({ projectId: "p1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Malformed JSON request body.");
+});
+
+test("create folder requires non-blank name", async () => {
+  const res = await createFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ name: "   " }) }), { params: Promise.resolve({ projectId: "p1" }) });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Folder name is required.");
 });
 
 test("create folder rejects archived project", async () => {
