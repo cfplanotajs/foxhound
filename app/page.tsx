@@ -15,6 +15,7 @@ import { RecentJobsPanel } from "@/components/studio/RecentJobsPanel";
 import { GenerationControls } from "@/components/studio/GenerationControls";
 import { PromptComposer } from "@/components/studio/PromptComposer";
 import { PresetManagerPanel } from "@/components/studio/PresetManagerPanel";
+import { getStudioWorkflow } from "@/lib/studio-workflow";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean; bestUseLabel?: string | null; defaultProvider?: string; defaultModel?: string };
@@ -327,10 +328,13 @@ export default function DashboardPage() {
     queued: tasks.filter((t) => t.status === "queued" || t.status === "processing").length
   };
 
+
+  const workflow = getStudioWorkflow({ presetId, singlePrompt, bulkPrompts, jobId, tasks });
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-        <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} />
+        <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} steps={workflow.steps.map((s) => ({ label: s.label, state: s.state }))} nextAction={workflow.nextAction} />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="space-y-6">
@@ -339,7 +343,7 @@ export default function DashboardPage() {
               <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
             </section>
 
-            {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><p className="mt-1 text-sm font-semibold text-blue-900">{workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p></section>{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -349,6 +353,9 @@ export default function DashboardPage() {
                     <p className="text-sm text-slate-600">Job ID: {jobId}</p>
                     <p className="text-sm text-slate-600">Status: {jobStatus}</p>
                     <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
+                    {workflow.isProcessing ? <p className="text-sm text-indigo-700">Worker is creating your images… If this stays here, make sure the worker is running.</p> : null}
+                    {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
+                    {workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
@@ -364,7 +371,7 @@ export default function DashboardPage() {
           </div>
 
           <aside className="space-y-6">
-            <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Checklist</p><div className="mt-2 grid gap-1 text-sm">{[["Generate variations", workflow.checklist.generated],["Edit one result", workflow.checklist.edited],["Compare original and edited", workflow.checklist.compared],["Approve one image", workflow.checklist.approved],["Download approved ZIP", workflow.checklist.exported]].map(([label, done]) => <p key={String(label)} className={done ? "text-emerald-700" : "text-slate-500"}>{done ? "✓" : "○"} {label}</p>)}</div></section><RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
           </aside>
         </section>
 
