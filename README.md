@@ -66,11 +66,13 @@ Health check:
 ```bash
 curl http://localhost:3000/api/health
 npm run health:check
+npm run smoke:check
 ```
 
 Backup helper:
 ```bash
 npm run backup
+npm run restore:check
 ```
 Includes:
 - SQLite DB backup
@@ -79,6 +81,11 @@ Includes:
 
 Excludes:
 - `.env` (back up separately and securely)
+
+When to use:
+- `npm run health:check`: quick liveness check.
+- `npm run smoke:check`: server/read-endpoint sanity check after start.
+- `npm run restore:check`: read-only validation after restoring DB/assets.
 
 ## Stakeholder demo script
 ### One-minute overview

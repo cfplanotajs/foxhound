@@ -16,6 +16,8 @@
     "presets:seed": "tsx scripts/seed-presets.ts",
     "health:check": "tsx scripts/health-check.ts",
     "backup": "tsx scripts/backup.ts",
+    "restore:check": "tsx scripts/restore-check.ts",
+    "smoke:check": "tsx scripts/smoke-check.ts",
     "verify": "npm run prisma:generate && npm test && npm run lint && npm run build && npm run typecheck"
   },
   "dependencies": {

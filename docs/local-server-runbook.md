@@ -82,6 +82,7 @@ Verification:
 ```bash
 npm run verify
 npm run health:check
+npm run smoke:check
 ```
 
 Live demo mode:
@@ -114,6 +115,14 @@ npm run health:check
 FOXHOUND_HEALTH_URL=http://localhost:3000/api/health npm run health:check
 ```
 
+Smoke-check helper:
+
+```bash
+npm run smoke:check
+# optional URL override
+FOXHOUND_BASE_URL=http://localhost:3000 npm run smoke:check
+```
+
 ## 5b) Optional PM2 process management
 PM2 is optional and not required for local development.
 
@@ -138,6 +147,7 @@ Optional script helper:
 
 ```bash
 npm run backup
+npm run restore:check
 ```
 
 What script backup includes:
@@ -147,6 +157,11 @@ What script backup includes:
 
 What script backup excludes:
 - `.env` (back up separately and securely)
+
+Restore-check helper purpose:
+- verifies restored DB file exists and can be queried
+- verifies storage directory exists
+- prints read-only DB summary counts (projects/jobs/tasks) when available
 
 ### What to back up
 Back up these together for a full restore:
@@ -189,6 +204,8 @@ Windows health check:
 
 ```powershell
 npm run health:check
+npm run smoke:check
+npm run restore:check
 ```
 
 ### Restore procedure
@@ -205,7 +222,10 @@ npm run health:check
    - open a completed image
    - run one Demo Mode generation
    - download ZIP
+   - run `npm run restore:check`
+   - run `npm run smoke:check`
    - verify health endpoint returns HTTP 200 (`/api/health`) or run `npm run health:check`
+   - open UI and verify latest jobs/images render correctly
 
 ## 7) Incident checklist
 
