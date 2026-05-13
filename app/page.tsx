@@ -17,6 +17,7 @@ import { PromptComposer } from "@/components/studio/PromptComposer";
 import { PresetManagerPanel } from "@/components/studio/PresetManagerPanel";
 import { getStudioWorkflow } from "@/lib/studio-workflow";
 import { getChecklistItemTone } from "@/components/studio/ui-helpers";
+import { SelectedAssetPanel } from "@/components/studio/SelectedAssetPanel";
 
 type Preset = { id: string; name: string; version: string; description: string; defaultProvider: string; defaultModel: string; defaultParams?: Record<string, unknown>; samplePrompt?: string | null; bestUseLabel?: string | null };
 type ManagerPreset = { stableKey: string; name: string; version: string; isArchived: boolean; bestUseLabel?: string | null; defaultProvider?: string; defaultModel?: string };
@@ -98,6 +99,7 @@ export default function DashboardPage() {
   const [showNextTip, setShowNextTip] = useState(true);
   const [showChecklistTip, setShowChecklistTip] = useState(true);
   const [showGalleryTip, setShowGalleryTip] = useState(true);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
 
@@ -136,6 +138,12 @@ export default function DashboardPage() {
 
   const promptValid = singlePrompt.trim().length > 0 || bulkPrompts.trim().length > 0;
   const formValid = Boolean(presetId && provider && model.trim() && promptValid);
+
+  useEffect(() => {
+    if (selectedTaskId) return;
+    const firstCompleted = tasks.find((task) => task.status === "completed");
+    if (firstCompleted) setSelectedTaskId(firstCompleted.id);
+  }, [tasks, selectedTaskId]);
 
   async function submitJob() {
     setError("");
@@ -349,7 +357,7 @@ export default function DashboardPage() {
               <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
             </section>
 
-            {showNextTip ? <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><button className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => setShowNextTip(false)}>Dismiss</button></div><p className="mt-1 text-sm font-semibold text-blue-900">Next up: {workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Try this: {workflow.nextActionHint}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section> : null}{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            {showNextTip ? <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><button className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => setShowNextTip(false)}>Dismiss</button></div><p className="mt-1 text-sm font-semibold text-blue-900">Next up: {workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Try this: {selectedTaskId ? (tasks.find((t) => t.id === selectedTaskId)?.mode === "edit" ? "Compare it with the original, then approve the best result." : "Edit this image or approve it.") : (counts.complete > 0 ? "Select your best image." : workflow.nextActionHint)}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section> : null}{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -371,7 +379,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
-                <GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} />
+                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} selectedTaskId={selectedTaskId} onSelectTask={(task) => setSelectedTaskId(task.id)} /><SelectedAssetPanel task={tasks.find((t) => t.id === selectedTaskId) ?? null} sourceTask={tasks.find((t) => t.id === (tasks.find((x) => x.id === selectedTaskId)?.sourceTaskId)) ?? null} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} /></div>
               </section>
             )}
           </div>
