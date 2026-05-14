@@ -24,34 +24,57 @@ test("manage GET returns stableKey for active and archived lists", async () => {
   (prisma.preset as any).findMany = orig;
 });
 
-test("archive action requires stableKey and updates archive flag", async () => {
+test("archive action requires stableKey and strict boolean isArchived", async () => {
   const orig = prisma.preset.update;
-  let received: any = null;
+  const received: any[] = [];
   (prisma.preset as any).update = async (args: any) => {
-    received = args;
+    received.push(args);
     return {};
   };
-  const bad = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "archive", isArchived: true }) }));
-  assert.equal(bad.status, 400);
-  const good = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "archive", stableKey: "abc", isArchived: true }) }));
-  assert.equal(good.status, 200);
-  assert.equal(received.where.stableKey, "abc");
+
+  const missingKey = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "archive", isArchived: true }) }));
+  assert.equal(missingKey.status, 400);
+
+  const setTrue = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "archive", stableKey: "abc", isArchived: true }) }));
+  assert.equal(setTrue.status, 200);
+  assert.equal(received[0].where.stableKey, "abc");
+  assert.equal(received[0].data.isArchived, true);
+
+  const setFalse = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "archive", stableKey: "abc", isArchived: false }) }));
+  assert.equal(setFalse.status, 200);
+  assert.equal(received[1].data.isArchived, false);
+
+  for (const invalidValue of ["false", "true", 1, undefined]) {
+    const payload: any = { action: "archive", stableKey: "abc" };
+    if (invalidValue !== undefined) payload.isArchived = invalidValue;
+    const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify(payload) }));
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error, "isArchived must be a boolean.");
+  }
+
+  assert.equal(received.length, 2);
   (prisma.preset as any).update = orig;
 });
 
-test("edit ignores client contentHash and does not create duplicate version for unchanged content", async () => {
+test("edit ignores client contentHash and persists metadata without creating duplicate version for unchanged content", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origUpdate = prisma.preset.update;
   const origTransaction = prisma.$transaction;
-  let updated = false;
+  const origVersionCreate = prisma.presetVersion.create;
+  const updateCalls: any[] = [];
+  let versionCreateCalls = 0;
   (prisma.preset as any).findUnique = async () => ({
     id: "p1",
     stableKey: "k1",
     versions: [{ version: "v1", contentHash: hashPresetContent({ stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {}, samplePrompt: null }) }]
   });
-  (prisma.preset as any).update = async () => {
-    updated = true;
+  (prisma.preset as any).update = async (args: any) => {
+    updateCalls.push(args);
     return {};
+  };
+  (prisma.presetVersion as any).create = async () => {
+    versionCreateCalls += 1;
+    return { version: "v2" };
   };
   (prisma as any).$transaction = async (fn: any) => fn(prisma);
   const res = await POST(
@@ -60,7 +83,9 @@ test("edit ignores client contentHash and does not create duplicate version for 
       body: JSON.stringify({
         action: "edit",
         stableKey: "k1",
-        name: "Preset",
+        name: "Preset renamed",
+        description: "new desc",
+        bestUseLabel: "label",
         stylePrompt: "Style",
         defaultProvider: "openai",
         defaultModel: "gpt-image-2",
@@ -73,10 +98,15 @@ test("edit ignores client contentHash and does not create duplicate version for 
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.equal(data.noChange, true);
-  assert.equal(updated, false);
+  assert.equal(updateCalls.length, 1);
+  assert.equal(updateCalls[0].data.name, "Preset renamed");
+  assert.equal(updateCalls[0].data.description, "new desc");
+  assert.equal(updateCalls[0].data.bestUseLabel, "label");
+  assert.equal(versionCreateCalls, 0);
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origUpdate;
   (prisma as any).$transaction = origTransaction;
+  (prisma.presetVersion as any).create = origVersionCreate;
 });
 
 test("duplicate uses deterministic contentHash derived from content", async () => {

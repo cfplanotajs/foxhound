@@ -109,7 +109,10 @@ export async function POST(request: Request) {
       const defaultParams = normalizePresetDefaultParams({ provider, model: defaultModel, defaultParams: parseDefaultParams(body.defaultParams) });
       const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt });
       const latest = preset.versions[0];
-      if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
+      if (latest && latest.contentHash === contentHash) {
+        await prisma.preset.update({ where: { id: preset.id }, data: { name, description, bestUseLabel } });
+        return NextResponse.json({ presetId: preset.id, noChange: true });
+      }
       const versionResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.preset.update({ where: { id: preset.id }, data: { name, description, bestUseLabel } });
         return createNextPresetVersionWithRetry({
@@ -166,7 +169,10 @@ export async function POST(request: Request) {
 
     if (action === "archive") {
       const stableKey = validatePresetStableKey(body.stableKey);
-      await prisma.preset.update({ where: { stableKey }, data: { isArchived: !!body.isArchived } });
+      if (typeof body.isArchived !== "boolean") {
+        return NextResponse.json({ error: "isArchived must be a boolean." }, { status: 400 });
+      }
+      await prisma.preset.update({ where: { stableKey }, data: { isArchived: body.isArchived } });
       return NextResponse.json({ ok: true });
     }
 
