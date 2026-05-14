@@ -404,21 +404,144 @@ export default function DashboardPage() {
     );
   }
 
+  const heroHeaderProps = {
+    provider,
+    showManager,
+    onToggleManager: () => setShowManager((v) => !v),
+    steps: workflow.steps.map((s) => ({ label: s.label, state: s.state })),
+    nextAction: workflow.nextAction
+  };
+
+  const generationControlsProps = {
+    presetId,
+    setPresetId,
+    presets,
+    selectedPreset,
+    provider,
+    setProvider,
+    model,
+    setModel,
+    aspectRatio,
+    setAspectRatio,
+    setAspectRatioTouched,
+    variationCount,
+    setVariationCount,
+    quality,
+    setQuality,
+    projectId,
+    setProjectId,
+    folderId,
+    setFolderId,
+    projects
+  };
+
+  const promptComposerProps = {
+    presets,
+    setPresetId,
+    setSinglePrompt,
+    error,
+    singlePrompt,
+    setSinglePromptValue: setSinglePrompt,
+    bulkPrompts,
+    setBulkPrompts,
+    constraints,
+    setConstraints,
+    loading,
+    formValid,
+    submitJob
+  };
+
+  const presetManagerPanelProps = {
+    managerName,
+    setManagerName,
+    managerPrompt,
+    setManagerPrompt,
+    createPresetFromManager,
+    managerError,
+    managerLoading,
+    managerPresets,
+    setPresetArchived
+  };
+
+  const openCompare = (task: JobTask) => {
+    setCompareTask(task);
+    setCompareOpened(true);
+  };
+
+  const galleryGridProps = {
+    filteredTasks,
+    tasks,
+    reviewUpdatingId,
+    setEditSourceTask,
+    setEditInstruction,
+    setEditConstraints,
+    setCompareTask: openCompare,
+    updateReview,
+    statusChip,
+    selectedTaskId,
+    onSelectTask: (task: JobTask) => setSelectedTaskId(task.id)
+  };
+
+  const selectedAssetPanelProps = {
+    task: selectedTask,
+    sourceTask: selectedSourceTask,
+    reviewUpdatingId,
+    setEditSourceTask,
+    setEditInstruction,
+    setEditConstraints,
+    setCompareTask: openCompare,
+    updateReview
+  };
+
+  const recentJobsPanelProps = {
+    recentJobs,
+    toast,
+    jobId,
+    rowLoadingId,
+    statusChip,
+    onOpen: async (targetId: string) => {
+      setJobId(targetId);
+      await refreshJob(targetId);
+      await refreshImages(targetId);
+    },
+    onDuplicate: duplicateJobIntoForm,
+    onRerun: rerunJobFromRow
+  };
+
+  const editPanelProps = editSourceTask ? {
+    editSourceTask,
+    provider,
+    editInstruction,
+    editConstraints,
+    editSubmitting,
+    onEditInstructionChange: setEditInstruction,
+    onEditConstraintsChange: setEditConstraints,
+    onAppendChip: (chip: string) => setEditInstruction((c) => appendEditChip(c, chip)),
+    onSubmitEdit: submitEdit,
+    onClose: () => setEditSourceTask(null)
+  } : null;
+
+  const compareModalProps = {
+    task: compareTask,
+    sourceUrl: tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? "",
+    onClose: () => setCompareTask(null)
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-        <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} steps={workflow.steps.map((s) => ({ label: s.label, state: s.state }))} nextAction={workflow.nextAction} />
+        <HeroHeader {...heroHeaderProps} />
         {renderShowTipsButton()}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <section className={`grid gap-6 lg:grid-cols-2 ${workflow.focusKey === "generate" ? "rounded-2xl ring-1 ring-blue-200 p-2" : ""}`}>
-              <GenerationControls presetId={presetId} setPresetId={setPresetId} presets={presets} selectedPreset={selectedPreset} provider={provider} setProvider={setProvider} model={model} setModel={setModel} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setAspectRatioTouched={setAspectRatioTouched} variationCount={variationCount} setVariationCount={setVariationCount} quality={quality} setQuality={setQuality} projectId={projectId} setProjectId={setProjectId} folderId={folderId} setFolderId={setFolderId} projects={projects} />
-              <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
+              <GenerationControls {...generationControlsProps} />
+              <PromptComposer {...promptComposerProps} />
             </section>
 
             {renderNextActionCard()}
-            {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            {showManager ? <PresetManagerPanel {...presetManagerPanelProps} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -435,19 +558,19 @@ export default function DashboardPage() {
                   {renderDownloadActions()}
                 </div>
                 <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
-                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} selectedTaskId={selectedTaskId} onSelectTask={(task) => setSelectedTaskId(task.id)} /><SelectedAssetPanel task={selectedTask} sourceTask={selectedSourceTask} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} /></div>
+                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid {...galleryGridProps} /><SelectedAssetPanel {...selectedAssetPanelProps} /></div>
               </section>
             )}
           </div>
 
           <aside className="space-y-6">
             {renderChecklistSection()}
-            <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
+            <RecentJobsPanel {...recentJobsPanelProps} />
           </aside>
         </section>
 
-        {editSourceTask ? <EditPanel editSourceTask={editSourceTask} provider={provider} editInstruction={editInstruction} editConstraints={editConstraints} editSubmitting={editSubmitting} onEditInstructionChange={setEditInstruction} onEditConstraintsChange={setEditConstraints} onAppendChip={(chip) => setEditInstruction((c) => appendEditChip(c, chip))} onSubmitEdit={submitEdit} onClose={() => setEditSourceTask(null)} /> : null}
-        <CompareModal task={compareTask} sourceUrl={tasks.find((t) => t.id === compareTask?.sourceTaskId)?.imageUrl ?? ""} onClose={() => setCompareTask(null)} />
+        {editPanelProps ? <EditPanel {...editPanelProps} /> : null}
+        <CompareModal {...compareModalProps} />
       </div>
     </main>
   );
