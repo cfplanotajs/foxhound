@@ -3,6 +3,7 @@ import presets from "@/config/presets.json";
 import { prisma } from "@/lib/db";
 import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { assertSupportedProvider } from "@/lib/providers/supported";
+import { getNextPresetVersionTag } from "@/lib/presets/version-tags";
 
 export type DbPresetView = {
   id: string;
@@ -24,17 +25,12 @@ function hashPresetContent(input: { stylePrompt: string; defaultProvider: string
   return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
-function nextVersionTag(current?: string | null) {
-  const n = current ? Number(current.replace(/^v/, "")) || 0 : 0;
-  return `v${n + 1}`;
-}
-
 async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, payload: { stylePrompt: string; defaultProvider: string; defaultModel: string; defaultParamsJson: string; samplePrompt?: string | null; contentHash: string }) {
   const existing = await db.presetVersion.findUnique({ where: { presetId_contentHash: { presetId, contentHash: payload.contentHash } } });
   if (existing) return existing;
 
-  const latest = await db.presetVersion.findFirst({ where: { presetId }, orderBy: { createdAt: "desc" } });
-  const version = nextVersionTag(latest?.version);
+  const versions = await db.presetVersion.findMany({ where: { presetId }, select: { version: true } });
+  const version = getNextPresetVersionTag(versions);
   try {
     return await db.presetVersion.create({ data: { presetId, version, ...payload } });
   } catch (error) {
@@ -50,10 +46,15 @@ async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, pa
 export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise<void> {
   for (const item of presets as Array<Record<string, any>>) {
     const stableKey = String(item.id);
-    const preset = await db.preset.upsert({
-      where: { stableKey },
-      update: { name: String(item.name), description: String(item.description), bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null },
-      create: { stableKey, name: String(item.name), description: String(item.description), bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null, isArchived: false }
+    const existingPreset = await db.preset.findUnique({ where: { stableKey } });
+    const preset = existingPreset ?? await db.preset.create({
+      data: {
+        stableKey,
+        name: String(item.name),
+        description: String(item.description),
+        bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null,
+        isArchived: false
+      }
     });
 
     const defaultProvider = assertSupportedProvider(String(item.defaultProvider));

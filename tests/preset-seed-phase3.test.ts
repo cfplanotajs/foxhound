@@ -19,7 +19,7 @@ test("duplicate-content race path (P2002) is safely handled", async () => {
   const db: any = {
     presetVersion: {
       findUnique: async ({ where }: any) => (where.presetId_contentHash.contentHash === "h1" && db._seen ? created : null),
-      findFirst: async () => ({ version: "v1" }),
+      findMany: async () => ([{ version: "v1" }]),
       create: async () => {
         db._seen = true;
         const err = new Error("dup") as Error & { code?: string };
