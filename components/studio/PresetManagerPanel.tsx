@@ -71,7 +71,7 @@ export function PresetManagerPanel({ managerName, setManagerName, managerPrompt,
         <div>
           <h3 className="font-medium text-slate-900">Active Presets</h3>
           {managerLoading ? <p className="mt-2 text-sm text-slate-500">Loading presets...</p> : null}
-          {!managerLoading && managerPresets.active.length === 0 ? <p className={emptyState}>No active presets yet. Create one to start standardizing styles.</p> : null}
+          {!managerLoading && managerPresets.active.length === 0 ? <p className={emptyState}>No active presets yet. Add a preset above to get started.</p> : null}
           <div className="mt-2 grid gap-2">{managerPresets.active.map((p) => <PresetCard key={p.stableKey} preset={p} onArchiveToggle={setPresetArchived} />)}</div>
         </div>
 

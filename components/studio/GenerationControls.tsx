@@ -23,7 +23,7 @@ export function GenerationControls(props: { presetId: string; setPresetId: (v: s
         <label className="grid gap-1"><span className={fieldLabel}>Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className={inputBase}>{getQualityOptionsForModel(provider as "openai" | "mock", model).map((q) => <option key={q} value={q}>{q}</option>)}</select></label>
         <ProjectFolderSelector projects={projects} projectId={projectId} folderId={folderId} onProjectChange={(nextProjectId) => { setProjectId(nextProjectId); setFolderId(""); }} onFolderChange={setFolderId} />
       </div>
-      <p className="mt-2 text-xs text-slate-600">{provider === "mock" ? "Demo Mode is safe for workflow testing and uses no OpenAI credits." : "OpenAI Mode creates real images and edits using your server-side API setup."}</p>
+      <p className="mt-2 text-xs text-slate-600">{provider === "mock" ? "Demo Mode uses local placeholder images and no OpenAI credits." : "OpenAI mode creates real images and edits using your server-side setup."}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { canEditTask } from "@/lib/jobs/edit-ui";
 import { getReviewStatusLabel } from "@/lib/review-ui";
 import type { ReactNode } from "react";
 import { AssetImage } from "./AssetImage";
-import { chipSoft } from "./ui";
+import { buttonSecondary, buttonStrongSecondary, chipSoft } from "./ui";
 import { getTaskModeLabel, getTaskProviderLabel } from "./ui-helpers";
 import type { StudioTask } from "./types";
 
@@ -31,7 +31,7 @@ export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceT
         {task.imageUrl ? (
           <AssetImage src={task.imageUrl} alt={task.subjectPrompt} width={1024} height={1024} className="h-72 w-full object-cover" sizes="(min-width: 768px) 33vw, 100vw" />
         ) : (
-          <div className="flex h-72 items-center justify-center text-slate-500">No Image Yet</div>
+          <div className="flex h-72 items-center justify-center text-slate-500">Image preview will appear here.</div>
         )}
       </div>
 
@@ -63,27 +63,27 @@ export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceT
       {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
 
       <div className="mt-3 flex flex-wrap gap-1 text-xs">
-        <button className="rounded bg-slate-100 px-2 py-1" onClick={() => onSelect(task)}>Focus</button>
+        <button className={buttonSecondary} onClick={() => onSelect(task)}>Open</button>
 
         {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? (
-          <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
+          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
             {task.mode === "edit" ? "Continue Editing" : "Edit Image"}
           </button>
         ) : null}
 
         {task.mode === "edit" && sourceTask?.imageUrl && task.imageUrl ? (
-          <button className="rounded bg-sky-100 px-2 py-1" onClick={() => setCompareTask(task)}>Compare</button>
+          <button className={buttonSecondary} onClick={() => setCompareTask(task)}>Compare</button>
         ) : null}
 
         <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Mark Favorite</button>
-        <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
-        <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-700 px-2 py-1 text-white disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 text-rose-700 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
       </div>
 
       {task.status === "failed" ? (
         <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
           <p className="font-semibold text-rose-800">{providerError?.title ?? task.errorMessage ?? "Image generation failed"}</p>
-          <p className="text-rose-700">{providerError?.designerMessage ?? "Please check technical details and retry."}{providerError?.suggestedAction ? ` Suggested action: ${providerError.suggestedAction}` : ""}</p>
+          <p className="text-rose-700">{providerError?.designerMessage ?? "Please review details and try again."}{providerError?.suggestedAction ? ` Suggested action: ${providerError.suggestedAction}` : ""}</p>
           <details className="mt-1 text-xs text-rose-900">
             <summary>Technical details</summary>
             <p>{providerError?.technicalMessage ?? task.lastError ?? task.errorMessage}</p>

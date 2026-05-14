@@ -370,7 +370,7 @@ export default function DashboardPage() {
         <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
         <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshImages()}>Refresh Gallery</button>
         <button className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={downloadZip}>Download ZIP</button>
-        <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
+        <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved</button>
       </div>
     );
   }
@@ -382,7 +382,7 @@ export default function DashboardPage() {
       ["Edit one result", workflow.checklist.edited],
       ["Compare original and edited", workflow.checklist.compared],
       ["Approve one image", workflow.checklist.approved],
-      ["Download approved ZIP", workflow.checklist.exported]
+      ["Download Approved", workflow.checklist.exported]
     ];
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

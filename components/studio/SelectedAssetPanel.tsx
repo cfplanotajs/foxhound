@@ -1,7 +1,7 @@
 import { canEditTask } from "@/lib/jobs/edit-ui";
 import { getReviewStatusLabel } from "@/lib/review-ui";
 import { AssetImage } from "./AssetImage";
-import { card, chipSoft } from "./ui";
+import { buttonSecondary, buttonStrongSecondary, card, chipSoft } from "./ui";
 import { canCompareAsset, getTaskModeLabel, getTaskProviderLabel } from "./ui-helpers";
 import type { StudioTask } from "./types";
 
@@ -29,7 +29,8 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
 
   return (
     <section className={card}>
-      <h3 className="text-lg font-semibold">Selected Asset</h3>
+      <h3 className="text-lg font-semibold">Selected Image</h3>
+      <p className="mt-1 text-sm text-slate-600">Review this image, then choose your next step.</p>
 
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
         {task.imageUrl ? (
@@ -65,18 +66,18 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
 
       <div className="mt-3 flex flex-wrap gap-1 text-xs">
         {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? (
-          <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
+          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
             {task.mode === "edit" ? "Continue Editing" : "Edit Image"}
           </button>
         ) : null}
 
         {canCompareAsset(task.mode, Boolean(sourceTask?.imageUrl), Boolean(task.imageUrl)) ? (
-          <button className="rounded bg-sky-100 px-2 py-1" onClick={() => setCompareTask(task)}>Compare</button>
+          <button className={buttonSecondary} onClick={() => setCompareTask(task)}>Compare</button>
         ) : null}
 
         <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Mark Favorite</button>
-        <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
-        <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-700 px-2 py-1 text-white disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 text-rose-700 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
       </div>
     </section>
   );
