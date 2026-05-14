@@ -321,12 +321,49 @@ export default function DashboardPage() {
 
 
   const workflow = getStudioWorkflow({ presetId, singlePrompt, bulkPrompts, jobId, tasks, compareOpened });
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const selectedSourceTask = tasks.find((task) => task.id === selectedTask?.sourceTaskId) ?? null;
+  const nextActionTip = selectedTask
+    ? selectedTask.mode === "edit"
+      ? "Compare it with the original, then approve the best result."
+      : "Edit this image or approve it."
+    : counts.complete > 0
+      ? "Select your best image."
+      : workflow.nextActionHint;
+
+  function renderShowTipsButton() {
+    if (showNextTip || showChecklistTip || showGalleryTip) return null;
+    return (
+      <div className="-mt-3">
+        <button className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600" onClick={() => { setShowNextTip(true); setShowChecklistTip(true); setShowGalleryTip(true); }}>
+          Show tips
+        </button>
+      </div>
+    );
+  }
+
+  function renderNextActionCard() {
+    if (!showNextTip) return null;
+    return (
+      <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p>
+          <button className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => setShowNextTip(false)}>Dismiss</button>
+        </div>
+        <p className="mt-1 text-sm font-semibold text-blue-900">Next up: {workflow.nextAction}</p>
+        <p className="mt-1 text-sm text-blue-800">{workflow.helper}</p>
+        <p className="mt-2 text-xs font-medium text-blue-700">Try this: {nextActionTip}</p>
+        {workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}
+        {workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}
+      </section>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-100 via-zinc-50 to-white">
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <HeroHeader provider={provider} showManager={showManager} onToggleManager={() => setShowManager((v) => !v)} steps={workflow.steps.map((s) => ({ label: s.label, state: s.state }))} nextAction={workflow.nextAction} />
-        {(!showNextTip && !showChecklistTip && !showGalleryTip) ? <div className="-mt-3"><button className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600" onClick={() => { setShowNextTip(true); setShowChecklistTip(true); setShowGalleryTip(true); }}>Show tips</button></div> : null}
+        {renderShowTipsButton()}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="space-y-6">
@@ -335,7 +372,8 @@ export default function DashboardPage() {
               <PromptComposer presets={presets} setPresetId={setPresetId} setSinglePrompt={setSinglePrompt} error={error} singlePrompt={singlePrompt} setSinglePromptValue={setSinglePrompt} bulkPrompts={bulkPrompts} setBulkPrompts={setBulkPrompts} constraints={constraints} setConstraints={setConstraints} loading={loading} formValid={formValid} submitJob={submitJob} />
             </section>
 
-            {showNextTip ? <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Next Best Action</p><button className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-blue-700" onClick={() => setShowNextTip(false)}>Dismiss</button></div><p className="mt-1 text-sm font-semibold text-blue-900">Next up: {workflow.nextAction}</p><p className="mt-1 text-sm text-blue-800">{workflow.helper}</p><p className="mt-2 text-xs font-medium text-blue-700">Try this: {selectedTaskId ? (tasks.find((t) => t.id === selectedTaskId)?.mode === "edit" ? "Compare it with the original, then approve the best result." : "Edit this image or approve it.") : (counts.complete > 0 ? "Select your best image." : workflow.nextActionHint)}</p>{workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}{workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}</section> : null}{showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
+            {renderNextActionCard()}
+            {showManager ? <PresetManagerPanel managerName={managerName} setManagerName={setManagerName} managerPrompt={managerPrompt} setManagerPrompt={setManagerPrompt} createPresetFromManager={createPresetFromManager} managerError={managerError} managerLoading={managerLoading} managerPresets={managerPresets} setPresetArchived={setPresetArchived} /> : null}
 
             {jobId && (
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -357,7 +395,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
-                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} selectedTaskId={selectedTaskId} onSelectTask={(task) => setSelectedTaskId(task.id)} /><SelectedAssetPanel task={tasks.find((t) => t.id === selectedTaskId) ?? null} sourceTask={tasks.find((t) => t.id === (tasks.find((x) => x.id === selectedTaskId)?.sourceTaskId)) ?? null} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} /></div>
+                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} selectedTaskId={selectedTaskId} onSelectTask={(task) => setSelectedTaskId(task.id)} /><SelectedAssetPanel task={selectedTask} sourceTask={selectedSourceTask} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} /></div>
               </section>
             )}
           </div>
