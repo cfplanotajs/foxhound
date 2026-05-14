@@ -90,6 +90,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tas
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     if (error instanceof Error && error.message === MISSING_OPENAI_KEY_MESSAGE) return NextResponse.json({ error: error.message }, { status: 400 });
     if (error instanceof Error && error.message.startsWith("Unsupported OpenAI image model:")) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof Error && error.message.startsWith("Quality ") && error.message.includes(" is not supported for model ")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }

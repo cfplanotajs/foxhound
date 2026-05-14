@@ -123,3 +123,21 @@ test("edit route returns friendly 400 when openai key missing", async () => {
   __resetEnvCacheForTests();
   restore();
 });
+
+test("edit route returns 400 for unsupported quality/model combinations", async () => {
+  const restore = setupEditableSource();
+  const ot = prisma.$transaction;
+  let txCalls = 0;
+  (prisma as any).$transaction = async () => {
+    txCalls += 1;
+    throw new Error("should not run");
+  };
+
+  const badMock = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", provider: "mock", model: "mock-v1", editInstruction: "white bg", quality: "hd" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(badMock.status, 400);
+  assert.equal((await badMock.json()).error, "Quality hd is not supported for model mock-v1.");
+
+  assert.equal(txCalls, 0);
+  (prisma as any).$transaction = ot;
+  restore();
+});
