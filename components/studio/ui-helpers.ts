@@ -11,3 +11,7 @@ export function getChecklistItemTone(done: boolean, isNext: boolean) {
   if (isNext) return "active" as const;
   return "pending" as const;
 }
+
+export function canCompareAsset(mode: "generate" | "edit" | undefined, hasSource: boolean, hasImage: boolean) {
+  return mode === "edit" && hasSource && hasImage;
+}

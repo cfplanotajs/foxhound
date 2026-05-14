@@ -5,10 +5,9 @@ import { AssetImage } from "./AssetImage";
 import { chipSoft } from "./ui";
 import { getTaskModeLabel, getTaskProviderLabel } from "./ui-helpers";
 
-type JobTask = {
-  id: string; subjectPrompt: string; status: "queued"|"processing"|"completed"|"failed"; presetName: string; presetVersion: string; provider: string; model: string;
-  imageUrl: string | null; mode?: "generate"|"edit"; editInstruction?: string | null; sourceTaskId?: string | null; variationIndex?: number | null; variationCount?: number | null; aspectRatio?: string | null; size?: string | null; reviewStatus?: "unreviewed"|"favorite"|"approved"|"rejected"; providerError?: { title?: string; designerMessage?: string; technicalMessage?: string; suggestedAction?: string } | null; errorMessage: string | null; lastError?: string | null;
-};
+import type { StudioTask } from "./types";
+
+type JobTask = StudioTask;
 
 export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceTask, setEditInstruction, setEditConstraints, setCompareTask, updateReview, statusChip, selected, onSelect }: { task: JobTask; sourceTask: JobTask | null; reviewUpdatingId: string | null; setEditSourceTask: (task: JobTask) => void; setEditInstruction: (value: string) => void; setEditConstraints: (value: string) => void; setCompareTask: (task: JobTask) => void; updateReview: (taskId: string, reviewStatus: "favorite"|"approved"|"rejected"|"unreviewed") => void; statusChip: (status: string) => ReactNode; selected: boolean; onSelect: (task: JobTask) => void }) {
   const providerError = task.providerError;

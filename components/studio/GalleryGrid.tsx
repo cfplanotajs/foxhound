@@ -2,7 +2,9 @@ import { GalleryCard } from "./GalleryCard";
 import type { ReactNode } from "react";
 import { emptyState } from "./ui";
 
-type JobTask = any;
+import type { StudioTask } from "./types";
+
+type JobTask = StudioTask;
 
 export function GalleryGrid(props: { filteredTasks: JobTask[]; tasks: JobTask[]; reviewUpdatingId: string | null; setEditSourceTask: (task: JobTask) => void; setEditInstruction: (value: string) => void; setEditConstraints: (value: string) => void; setCompareTask: (task: JobTask) => void; updateReview: (taskId: string, reviewStatus: "favorite"|"approved"|"rejected"|"unreviewed") => void; statusChip: (status: string) => ReactNode; selectedTaskId: string | null; onSelectTask: (task: JobTask) => void }) {
   const { filteredTasks, tasks, ...rest } = props;
