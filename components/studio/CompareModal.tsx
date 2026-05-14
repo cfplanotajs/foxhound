@@ -1,11 +1,28 @@
+import { useEffect, useRef } from "react";
 import { buttonSecondary, card, helperText, sectionHeader } from "./ui";
 import { AssetImage } from "./AssetImage";
 
 type CompareTask = { sourceTaskId?: string | null; imageUrl: string | null; editInstruction?: string | null };
 
 export function CompareModal({ task, sourceUrl, onClose }: { task: CompareTask | null; sourceUrl: string; onClose: () => void }) {
+  const isOpen = Boolean(task?.sourceTaskId);
+  const snippet = (task?.editInstruction ?? "No edit instruction recorded.").slice(0, 140);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (triggerRef.current && document.contains(triggerRef.current)) triggerRef.current.focus();
+    };
+  }, [isOpen, onClose]);
+
   if (!task?.sourceTaskId) return null;
-  const snippet = (task.editInstruction ?? "No edit instruction recorded.").slice(0, 140);
 
   return (
     <section className="fixed inset-0 z-20 bg-slate-900/60 p-4 md:p-6">
