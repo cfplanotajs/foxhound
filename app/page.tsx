@@ -37,6 +37,7 @@ function statusChip(status: string) {
 }
 
 export default function DashboardPage() {
+  // state declarations
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetId, setPresetId] = useState("");
   const [singlePrompt, setSinglePrompt] = useState("");
@@ -79,8 +80,8 @@ export default function DashboardPage() {
   const [showGalleryTip, setShowGalleryTip] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
+  // derived state
   const selectedPreset = useMemo(() => presets.find((p) => p.id === presetId), [presets, presetId]);
-
   const loadPresets = useCallback(async () => {
     const res = await fetch("/api/presets");
     const data = await res.json();
@@ -123,6 +124,7 @@ export default function DashboardPage() {
     if (firstCompleted) setSelectedTaskId(firstCompleted.id);
   }, [tasks, selectedTaskId]);
 
+  // generate/edit submit handlers
   async function submitJob() {
     setError("");
     if (!presetId) return setError("Preset is required.");
@@ -161,6 +163,7 @@ export default function DashboardPage() {
     const data = await res.json();
     setTasks(data.tasks ?? []);
   }
+  // review/download/compare handlers
   async function updateReview(taskId: string, reviewStatus: ReviewStatus) {
     setReviewError("");
     setReviewUpdatingId(taskId);
@@ -174,6 +177,7 @@ export default function DashboardPage() {
     setTasks((current) => current.map((task) => task.id === taskId ? { ...task, reviewStatus } : task));
     setReviewUpdatingId(null);
   }
+  // duplicate/rerun/preset/project handlers
   async function duplicateJobIntoForm(targetJobId: string) {
     setRowLoadingId(targetJobId);
     const templateRes = await fetch(`/api/jobs/${targetJobId}/template`);
@@ -311,8 +315,8 @@ export default function DashboardPage() {
     if (data?.error) setManagerError(data.error);
   }
 
+  // derived state
   const filteredTasks = filterTasksByReview(tasks, reviewFilter);
-
   const counts = {
     complete: tasks.filter((t) => t.status === "completed").length,
     failed: tasks.filter((t) => t.status === "failed").length,
@@ -331,6 +335,7 @@ export default function DashboardPage() {
       ? "Select your best image."
       : workflow.nextActionHint;
 
+  // local render helpers
   function renderShowTipsButton() {
     if (showNextTip || showChecklistTip || showGalleryTip) return null;
     return (
@@ -355,6 +360,46 @@ export default function DashboardPage() {
         <p className="mt-2 text-xs font-medium text-blue-700">Try this: {nextActionTip}</p>
         {workflow.isProcessing ? <p className="mt-1 text-xs text-blue-700">If this takes too long, make sure the worker is running.</p> : null}
         {workflow.successMessage ? <p className="mt-1 text-xs text-emerald-700">{workflow.successMessage}</p> : null}
+      </section>
+    );
+  }
+
+  function renderDownloadActions() {
+    return (
+      <div className={`flex flex-wrap gap-2 ${workflow.focusKey === "export" ? "rounded-xl ring-1 ring-emerald-200 p-1" : ""}`}>
+        <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
+        <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshImages()}>Refresh Gallery</button>
+        <button className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={downloadZip}>Download ZIP</button>
+        <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
+      </div>
+    );
+  }
+
+  function renderChecklistSection() {
+    if (!showChecklistTip) return null;
+    const checklistItems: Array<[string, boolean]> = [
+      ["Generate variations", workflow.checklist.generated],
+      ["Edit one result", workflow.checklist.edited],
+      ["Compare original and edited", workflow.checklist.compared],
+      ["Approve one image", workflow.checklist.approved],
+      ["Download approved ZIP", workflow.checklist.exported]
+    ];
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Checklist</p>
+          <button className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600" onClick={() => setShowChecklistTip(false)}>Dismiss</button>
+        </div>
+        <div className="mt-2 grid gap-1 text-sm">
+          {checklistItems.map(([label, done], idx) => {
+            const tone = getChecklistItemTone(done, !done && idx === 1 && !workflow.checklist.edited);
+            return (
+              <p key={label} className={tone === "done" ? "rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700" : tone === "active" ? "rounded-md bg-blue-50 px-2 py-1 text-blue-700" : "px-2 py-1 text-slate-500"}>
+                {done ? "✓" : "○"} {label}
+              </p>
+            );
+          })}
+        </div>
       </section>
     );
   }
@@ -387,12 +432,7 @@ export default function DashboardPage() {
                     {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
                     {showGalleryTip ? <><div className="mt-1"><button className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600" onClick={() => setShowGalleryTip(false)}>Hide tips</button></div>{workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}</> : null}
                   </div>
-                  <div className={`flex flex-wrap gap-2 ${workflow.focusKey === "export" ? "rounded-xl ring-1 ring-emerald-200 p-1" : ""}`}>
-                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshJob()}>Refresh Status</button>
-                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700" onClick={() => refreshImages()}>Refresh Gallery</button>
-                    <button className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={downloadZip}>Download ZIP</button>
-                    <button className="rounded-xl bg-emerald-900 px-3 py-2 text-sm font-semibold text-white" onClick={downloadApprovedZip}>Download Approved ZIP</button>
-                  </div>
+                  {renderDownloadActions()}
                 </div>
                 <div className={workflow.focusKey === "review" ? "rounded-xl ring-1 ring-indigo-200 p-2" : ""}><ReviewToolbar reviewFilter={reviewFilter} setReviewFilter={setReviewFilter} reviewError={reviewError} /></div>
                 <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><GalleryGrid filteredTasks={filteredTasks} tasks={tasks} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} statusChip={statusChip} selectedTaskId={selectedTaskId} onSelectTask={(task) => setSelectedTaskId(task.id)} /><SelectedAssetPanel task={selectedTask} sourceTask={selectedSourceTask} reviewUpdatingId={reviewUpdatingId} setEditSourceTask={setEditSourceTask} setEditInstruction={setEditInstruction} setEditConstraints={setEditConstraints} setCompareTask={(task) => { setCompareTask(task); setCompareOpened(true); }} updateReview={updateReview} /></div>
@@ -401,7 +441,8 @@ export default function DashboardPage() {
           </div>
 
           <aside className="space-y-6">
-            {showChecklistTip ? <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Checklist</p><button className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600" onClick={() => setShowChecklistTip(false)}>Dismiss</button></div><div className="mt-2 grid gap-1 text-sm">{[["Generate variations", workflow.checklist.generated],["Edit one result", workflow.checklist.edited],["Compare original and edited", workflow.checklist.compared],["Approve one image", workflow.checklist.approved],["Download approved ZIP", workflow.checklist.exported]].map(([label, done], idx) => <p key={String(label)} className={(() => { const tone = getChecklistItemTone(Boolean(done), !Boolean(done) && idx === 1 && !workflow.checklist.edited); return tone === "done" ? "rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700" : tone === "active" ? "rounded-md bg-blue-50 px-2 py-1 text-blue-700" : "px-2 py-1 text-slate-500"; })()}>{done ? "✓" : "○"} {label}</p>)}</div></section> : null}<RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
+            {renderChecklistSection()}
+            <RecentJobsPanel recentJobs={recentJobs} toast={toast} jobId={jobId} rowLoadingId={rowLoadingId} statusChip={statusChip} onOpen={async (targetId) => { setJobId(targetId); await refreshJob(targetId); await refreshImages(targetId); }} onDuplicate={duplicateJobIntoForm} onRerun={rerunJobFromRow} />
           </aside>
         </section>
 
