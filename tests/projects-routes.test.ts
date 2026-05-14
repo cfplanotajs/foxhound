@@ -86,6 +86,19 @@ test("archive malformed JSON returns 400", async () => {
   assert.equal((await res.json()).error, "Malformed JSON request body.");
 });
 
+
+
+test("archive project rejects non-boolean isArchived", async () => {
+  const a = await archiveProject(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: "false" }) }), { params: Promise.resolve({ projectId: "p1" }) });
+  const b = await archiveProject(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: "true" }) }), { params: Promise.resolve({ projectId: "p1" }) });
+  const c = await archiveProject(new Request("http://x", { method: "POST", body: JSON.stringify({}) }), { params: Promise.resolve({ projectId: "p1" }) });
+  assert.equal(a.status, 400);
+  assert.equal(b.status, 400);
+  assert.equal(c.status, 400);
+  assert.equal((await a.json()).error, "isArchived must be a boolean.");
+});
+
+
 test("archive and unarchive existing project succeeds", async () => {
   const ou = prisma.project.update;
   (prisma.project as any).update = async () => ({ id: "p1" });
@@ -102,6 +115,20 @@ test("folder archive malformed JSON returns 400", async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, "Malformed JSON request body.");
 });
+
+
+
+test("folder archive rejects non-boolean isArchived", async () => {
+  const ofind = prisma.projectFolder.findUnique;
+  (prisma.projectFolder as any).findUnique = async () => ({ id: "f1", projectId: "p1" });
+  const a = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({ isArchived: "false" }) }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  const b = await archiveFolder(new Request("http://x", { method: "POST", body: JSON.stringify({}) }), { params: Promise.resolve({ projectId: "p1", folderId: "f1" }) });
+  assert.equal(a.status, 400);
+  assert.equal(b.status, 400);
+  assert.equal((await a.json()).error, "isArchived must be a boolean.");
+  (prisma.projectFolder as any).findUnique = ofind;
+});
+
 
 test("folder archive and unarchive succeeds", async () => {
   const ofind = prisma.projectFolder.findUnique;
