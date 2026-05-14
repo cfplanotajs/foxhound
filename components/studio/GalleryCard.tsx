@@ -1,0 +1,95 @@
+import { canEditTask } from "@/lib/jobs/edit-ui";
+import { getReviewStatusLabel } from "@/lib/review-ui";
+import type { ReactNode } from "react";
+import { AssetImage } from "./AssetImage";
+import { chipSoft } from "./ui";
+import { getTaskModeLabel, getTaskProviderLabel } from "./ui-helpers";
+import type { StudioTask } from "./types";
+
+type JobTask = StudioTask;
+
+type Props = {
+  task: JobTask;
+  sourceTask: JobTask | null;
+  reviewUpdatingId: string | null;
+  setEditSourceTask: (task: JobTask) => void;
+  setEditInstruction: (value: string) => void;
+  setEditConstraints: (value: string) => void;
+  setCompareTask: (task: JobTask) => void;
+  updateReview: (taskId: string, reviewStatus: "favorite" | "approved" | "rejected" | "unreviewed") => void;
+  statusChip: (status: string) => ReactNode;
+  selected: boolean;
+  onSelect: (task: JobTask) => void;
+};
+
+export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceTask, setEditInstruction, setEditConstraints, setCompareTask, updateReview, statusChip, selected, onSelect }: Props) {
+  const providerError = task.providerError;
+
+  return (
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${selected ? "border-blue-300 ring-1 ring-blue-200" : "border-slate-200"}`}>
+      <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-slate-50" onClick={() => onSelect(task)} role="button">
+        {task.imageUrl ? (
+          <AssetImage src={task.imageUrl} alt={task.subjectPrompt} width={1024} height={1024} className="h-72 w-full object-cover" sizes="(min-width: 768px) 33vw, 100vw" />
+        ) : (
+          <div className="flex h-72 items-center justify-center text-slate-500">No Image Yet</div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1">
+        {statusChip(task.status)}
+        <span className={chipSoft}>{getTaskModeLabel(task.mode)}</span>
+        <span className={chipSoft}>{getTaskProviderLabel(task.provider)}</span>
+        <span className={chipSoft}>{getReviewStatusLabel(task.reviewStatus)}</span>
+      </div>
+
+      <p className="mt-2 text-sm"><strong>Prompt:</strong> {task.subjectPrompt.slice(0, 96)}</p>
+      <p className="text-sm"><strong>Preset:</strong> {task.presetName} ({task.presetVersion})</p>
+
+      {task.mode === "edit" ? (
+        <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+          <p className="text-xs font-semibold text-indigo-800">Edited from previous image</p>
+          <p className="text-xs text-indigo-700">{task.editInstruction?.slice(0, 84) ?? "Instruction unavailable"}</p>
+        </div>
+      ) : null}
+
+      {task.mode === "edit" && sourceTask?.imageUrl ? (
+        <div className="mt-2 flex items-center gap-2">
+          <AssetImage src={sourceTask.imageUrl} alt="source preview" width={64} height={64} className="h-16 w-16 rounded border object-cover" sizes="64px" />
+          <p className="text-xs text-slate-600">Source thumbnail</p>
+        </div>
+      ) : null}
+
+      {task.variationIndex && task.variationCount ? <p className="mt-1 text-xs text-slate-600">Variation {task.variationIndex} of {task.variationCount}</p> : null}
+      {task.aspectRatio || task.size ? <p className="text-xs text-slate-600">Ratio/Size: {task.aspectRatio ?? "-"} · {task.size ?? "-"}</p> : null}
+
+      <div className="mt-3 flex flex-wrap gap-1 text-xs">
+        <button className="rounded bg-slate-100 px-2 py-1" onClick={() => onSelect(task)}>Focus</button>
+
+        {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? (
+          <button className="rounded bg-indigo-100 px-2 py-1" onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
+            {task.mode === "edit" ? "Continue Editing" : "Edit Image"}
+          </button>
+        ) : null}
+
+        {task.mode === "edit" && sourceTask?.imageUrl && task.imageUrl ? (
+          <button className="rounded bg-sky-100 px-2 py-1" onClick={() => setCompareTask(task)}>Compare</button>
+        ) : null}
+
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-yellow-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "favorite")}>Mark Favorite</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-emerald-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "approved")}>Approve</button>
+        <button disabled={reviewUpdatingId === task.id} className="rounded bg-rose-100 px-2 py-1 disabled:opacity-60" onClick={() => updateReview(task.id, "rejected")}>Reject</button>
+      </div>
+
+      {task.status === "failed" ? (
+        <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm">
+          <p className="font-semibold text-rose-800">{providerError?.title ?? task.errorMessage ?? "Image generation failed"}</p>
+          <p className="text-rose-700">{providerError?.designerMessage ?? "Please check technical details and retry."}{providerError?.suggestedAction ? ` Suggested action: ${providerError.suggestedAction}` : ""}</p>
+          <details className="mt-1 text-xs text-rose-900">
+            <summary>Technical details</summary>
+            <p>{providerError?.technicalMessage ?? task.lastError ?? task.errorMessage}</p>
+          </details>
+        </div>
+      ) : null}
+    </div>
+  );
+}
