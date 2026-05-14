@@ -9,6 +9,9 @@ test("resolveSqlitePath supports sqlite file URLs", () => {
   const cwd = "/repo";
   assert.equal(resolveSqlitePath("file:./prisma/dev.db", cwd), path.resolve(cwd, "./prisma/dev.db"));
   assert.equal(resolveSqlitePath("file:/var/data/foxhound.db", cwd), path.resolve("/var/data/foxhound.db"));
+  assert.equal(resolveSqlitePath("file:./prisma/dev.db?connection_limit=1", cwd), path.resolve(cwd, "./prisma/dev.db"));
+  assert.equal(resolveSqlitePath("file:./prisma/dev.db#backup", cwd), path.resolve(cwd, "./prisma/dev.db"));
+  assert.equal(resolveSqlitePath("file:./prisma/dev.db?connection_limit=1#backup", cwd), path.resolve(cwd, "./prisma/dev.db"));
 });
 
 test("resolveStorageDir defaults to generated and supports env override", () => {

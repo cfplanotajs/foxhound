@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 
 export function resolveSqlitePath(databaseUrl: string, cwd = process.cwd()): string {
   if (!databaseUrl.startsWith("file:")) throw new Error("DATABASE_URL must be a SQLite file URL (file:...) for this backup script.");
-  const raw = databaseUrl.slice("file:".length);
+  const raw = databaseUrl.slice("file:".length).split(/[?#]/, 1)[0];
   if (!raw) throw new Error("DATABASE_URL file path is empty.");
   return path.isAbsolute(raw) ? raw : path.resolve(cwd, raw);
 }
