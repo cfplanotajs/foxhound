@@ -21,12 +21,12 @@ export function PromptComposer({ presets, setPresetId, setSinglePrompt, error, s
           </button>
         ))}
       </div>
-      {error ? <p className={`mt-3 ${errorSurface}`}>{error}</p> : null}
+      {error ? <p role="alert" className={`mt-3 ${errorSurface}`}>{error}</p> : null}
       <label className="mt-3 grid gap-1"><span className={fieldLabel}>Single Prompt</span><textarea value={singlePrompt} onChange={(e) => setSinglePromptValue(e.target.value)} className={`min-h-28 ${textAreaBase}`} placeholder="Describe subject, composition, style, and lighting..." /></label>
       <label className="mt-2 grid gap-1"><span className={fieldLabel}>Bulk Prompts (one per line)</span><textarea value={bulkPrompts} onChange={(e) => setBulkPrompts(e.target.value)} className={`min-h-24 ${textAreaBase}`} /></label>
       <label className="mt-2 grid gap-1"><span className={fieldLabel}>Production Constraints (optional)</span><textarea value={constraints} onChange={(e) => setConstraints(e.target.value)} className={`min-h-16 ${textAreaBase}`} /></label>
       <p className={`mt-2 ${subtleText}`}>Submit is enabled when preset, provider, model, and at least one prompt line are present.</p>
-      <button disabled={loading || !formValid} className={`mt-3 ${buttonPrimary}`} onClick={submitJob}>{loading ? "Generating..." : "Generate Images"}</button>
+      <button disabled={loading || !formValid} aria-busy={loading} className={`mt-3 ${buttonPrimary}`} onClick={submitJob}>{loading ? "Generating..." : "Generate Images"}</button>
     </div>
   );
 }

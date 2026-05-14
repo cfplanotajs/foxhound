@@ -34,7 +34,7 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
 
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
         {task.imageUrl ? (
-          <AssetImage src={task.imageUrl} alt={task.subjectPrompt} width={1024} height={1024} className="h-80 w-full object-cover" sizes="(min-width: 1280px) 25vw, 100vw" />
+          <AssetImage src={task.imageUrl} alt={`Selected image preview for: ${task.subjectPrompt.slice(0, 96)}`} width={1024} height={1024} className="h-80 w-full object-cover" sizes="(min-width: 1280px) 25vw, 100vw" />
         ) : (
           <div className="flex h-80 items-center justify-center text-slate-500">No image available yet.</div>
         )}
@@ -66,7 +66,7 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
 
       <div className="mt-3 flex flex-wrap gap-1 text-xs">
         {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? (
-          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
+          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }} aria-label={task.mode === "edit" ? "Continue editing selected image" : "Edit selected image"}>
             {task.mode === "edit" ? "Continue Editing" : "Edit Image"}
           </button>
         ) : null}

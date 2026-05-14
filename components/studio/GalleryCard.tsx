@@ -27,13 +27,13 @@ export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceT
 
   return (
     <div className={`rounded-2xl border bg-white p-4 shadow-sm ${selected ? "border-blue-300 ring-1 ring-blue-200" : "border-slate-200"}`}>
-      <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-slate-50" onClick={() => onSelect(task)} role="button">
+      <button type="button" className="relative w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1" onClick={() => onSelect(task)} aria-label={`Select image for prompt: ${task.subjectPrompt.slice(0, 60)}`}>
         {task.imageUrl ? (
-          <AssetImage src={task.imageUrl} alt={task.subjectPrompt} width={1024} height={1024} className="h-72 w-full object-cover" sizes="(min-width: 768px) 33vw, 100vw" />
+          <AssetImage src={task.imageUrl} alt={`Generated image preview for: ${task.subjectPrompt.slice(0, 96)}`} width={1024} height={1024} className="h-72 w-full object-cover" sizes="(min-width: 768px) 33vw, 100vw" />
         ) : (
           <div className="flex h-72 items-center justify-center text-slate-500">Image preview will appear here.</div>
         )}
-      </div>
+      </button>
 
       <div className="mt-3 flex flex-wrap gap-1">
         {statusChip(task.status)}
@@ -66,7 +66,7 @@ export function GalleryCard({ task, sourceTask, reviewUpdatingId, setEditSourceT
         <button className={buttonSecondary} onClick={() => onSelect(task)}>Open</button>
 
         {canEditTask({ status: task.status, imageUrl: task.imageUrl }) ? (
-          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }}>
+          <button className={buttonStrongSecondary} onClick={() => { setEditSourceTask(task); setEditInstruction(""); setEditConstraints(""); }} aria-label={task.mode === "edit" ? "Continue editing selected image" : "Edit selected image"}>
             {task.mode === "edit" ? "Continue Editing" : "Edit Image"}
           </button>
         ) : null}
