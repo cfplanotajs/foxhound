@@ -1,10 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { GET, POST } from "../app/api/presets/manage/route.ts";
+import { getNextPresetVersionTag, parsePresetVersionNumber } from "../lib/presets/version-tags.ts";
 import { prisma } from "../lib/db.ts";
 import { hashPresetContent } from "../lib/presets.ts";
 
 
+
+
+
+test("parsePresetVersionNumber parses only valid numeric tags", () => {
+  assert.equal(parsePresetVersionNumber("v1"), 1);
+  assert.equal(parsePresetVersionNumber("v10"), 10);
+  assert.equal(parsePresetVersionNumber(" v2 "), 2);
+  assert.equal(parsePresetVersionNumber("v"), null);
+  assert.equal(parsePresetVersionNumber("vx"), null);
+  assert.equal(parsePresetVersionNumber("1"), null);
+});
+
+test("getNextPresetVersionTag computes next tag from highest numeric version", () => {
+  assert.equal(getNextPresetVersionTag([]), "v1");
+  assert.equal(getNextPresetVersionTag([{ version: "v1" }, { version: "v2" }]), "v3");
+  assert.equal(getNextPresetVersionTag([{ version: "v1" }, { version: "v2" }, { version: "v10" }]), "v11");
+  assert.equal(getNextPresetVersionTag([{ version: "v2" }, { version: "bad-tag" }]), "v3");
+});
 
 test("manage POST returns 400 for malformed JSON body", async () => {
   const res = await POST(new Request("http://x", { method: "POST", body: "{bad", headers: { "content-type": "application/json" } }));
@@ -328,14 +347,14 @@ test("edit retries on version collision and succeeds", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origPresetUpdate = prisma.preset.update;
   const origTransaction = prisma.$transaction;
-  const origFindFirst = prisma.presetVersion.findFirst;
+  const origFindMany = prisma.presetVersion.findMany;
   const origVersionCreate = prisma.presetVersion.create;
   const origFindContent = prisma.presetVersion.findUnique;
   let createCalls = 0;
   (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
   (prisma.preset as any).update = async () => ({});
   (prisma as any).$transaction = async (fn: any) => fn(prisma);
-  (prisma.presetVersion as any).findFirst = async () => ({ version: createCalls === 0 ? "v1" : "v2" });
+  (prisma.presetVersion as any).findMany = async () => (createCalls === 0 ? [{ version: "v1" }] : [{ version: "v1" }, { version: "v2" }]);
   (prisma.presetVersion as any).findUnique = async () => null;
   (prisma.presetVersion as any).create = async () => {
     createCalls += 1;
@@ -348,7 +367,7 @@ test("edit retries on version collision and succeeds", async () => {
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origPresetUpdate;
   (prisma as any).$transaction = origTransaction;
-  (prisma.presetVersion as any).findFirst = origFindFirst;
+  (prisma.presetVersion as any).findMany = origFindMany;
   (prisma.presetVersion as any).create = origVersionCreate;
   (prisma.presetVersion as any).findUnique = origFindContent;
 });
@@ -357,13 +376,13 @@ test("edit returns 500 after repeated version collisions", async () => {
   const origFindUnique = prisma.preset.findUnique;
   const origPresetUpdate = prisma.preset.update;
   const origTransaction = prisma.$transaction;
-  const origFindFirst = prisma.presetVersion.findFirst;
+  const origFindMany = prisma.presetVersion.findMany;
   const origVersionCreate = prisma.presetVersion.create;
   const origFindContent = prisma.presetVersion.findUnique;
   (prisma.preset as any).findUnique = async () => ({ id: "p1", stableKey: "k1", versions: [{ version: "v1", contentHash: "old" }] });
   (prisma.preset as any).update = async () => ({});
   (prisma as any).$transaction = async (fn: any) => fn(prisma);
-  (prisma.presetVersion as any).findFirst = async () => ({ version: "v1" });
+  (prisma.presetVersion as any).findMany = async () => ([{ version: "v1" }]);
   (prisma.presetVersion as any).findUnique = async () => null;
   (prisma.presetVersion as any).create = async () => { throw Object.assign(new Error("collision"), { code: "P2002" }); };
   const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ action: "edit", stableKey: "k1", name: "Preset", stylePrompt: "Style new", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: {} }) }));
@@ -371,7 +390,7 @@ test("edit returns 500 after repeated version collisions", async () => {
   (prisma.preset as any).findUnique = origFindUnique;
   (prisma.preset as any).update = origPresetUpdate;
   (prisma as any).$transaction = origTransaction;
-  (prisma.presetVersion as any).findFirst = origFindFirst;
+  (prisma.presetVersion as any).findMany = origFindMany;
   (prisma.presetVersion as any).create = origVersionCreate;
   (prisma.presetVersion as any).findUnique = origFindContent;
 });
@@ -390,7 +409,7 @@ test("edit keeps metadata unchanged when version creation fails inside transacti
         }
       },
       presetVersion: {
-        findFirst: async () => ({ version: "v1" }),
+        findMany: async () => ([{ version: "v1" }]),
         findUnique: async () => null,
         create: async () => {
           throw Object.assign(new Error("collision"), { code: "P2002" });

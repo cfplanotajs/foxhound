@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPresetContent } from "@/lib/presets";
+import { getNextPresetVersionTag } from "@/lib/presets/version-tags";
 import { isPresetManageValidationError, normalizePresetDefaultParams, normalizePresetProviderModel, parseDefaultParams, requiredText, validatePresetStableKey } from "@/lib/presets/manage-validation";
 import { parseJsonBody } from "@/lib/jobs/json-body";
-
 
 async function createNextPresetVersionWithRetry(input: {
   db: Prisma.TransactionClient | typeof prisma;
@@ -17,8 +17,8 @@ async function createNextPresetVersionWithRetry(input: {
   contentHash: string;
 }) {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const latest = await input.db.presetVersion.findFirst({ where: { presetId: input.presetId }, orderBy: { createdAt: "desc" } });
-    const next = `v${((latest && Number(latest.version.replace(/^v/, ""))) || 0) + 1}`;
+    const versions = await input.db.presetVersion.findMany({ where: { presetId: input.presetId }, select: { version: true } });
+    const next = getNextPresetVersionTag(versions);
     try {
       const created = await input.db.presetVersion.create({
         data: {
