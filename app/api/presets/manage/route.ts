@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       const contentHash = hashPresetContent({ stylePrompt, defaultProvider: provider, defaultModel, defaultParams, samplePrompt });
       const latest = preset.versions[0];
       if (latest && latest.contentHash === contentHash) return NextResponse.json({ presetId: preset.id, noChange: true });
-      const versionResult = await prisma.$transaction(async (tx) => {
+      const versionResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.preset.update({ where: { id: preset.id }, data: { name, description, bestUseLabel } });
         return createNextPresetVersionWithRetry({
           db: tx,
