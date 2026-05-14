@@ -38,6 +38,7 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
    ```bash
    npm run verify
    ```
+   This runs Prisma generation, tests, lint, build, and typecheck in sequence.
 
 ## Run locally (development)
 Terminal 1:
