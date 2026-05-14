@@ -80,3 +80,46 @@ test("seed does not overwrite existing managed metadata fields", async () => {
   assert.equal(createCalls, 0);
   assert.equal(updateCalls, 0);
 });
+
+test("seed handles P2002 on preset create by re-reading existing preset", async () => {
+  let findCalls = 0;
+  const db: any = {
+    preset: {
+      findUnique: async () => {
+        findCalls += 1;
+        return findCalls >= 2 ? { id: "p1", stableKey: "character_closeup_clean", name: "Custom", description: "Custom", bestUseLabel: "Custom", isArchived: false } : null;
+      },
+      create: async () => {
+        const err = new Error("dup") as Error & { code?: string };
+        err.code = "P2002";
+        throw err;
+      }
+    },
+    presetVersion: {
+      findUnique: async () => ({ id: "existing-version" }),
+      findMany: async () => ([{ version: "v1" }]),
+      create: async () => ({ id: "new-version" })
+    }
+  };
+  await seedPresetsFromConfig(db);
+  assert.ok(findCalls >= 2);
+});
+
+test("seed throws safe error when P2002 re-read still returns null", async () => {
+  const db: any = {
+    preset: {
+      findUnique: async () => null,
+      create: async () => {
+        const err = new Error("dup") as Error & { code?: string };
+        err.code = "P2002";
+        throw err;
+      }
+    },
+    presetVersion: {
+      findUnique: async () => ({ id: "existing-version" }),
+      findMany: async () => ([{ version: "v1" }]),
+      create: async () => ({ id: "new-version" })
+    }
+  };
+  await assert.rejects(() => seedPresetsFromConfig(db), /Preset create conflicted but existing preset was not found./);
+});

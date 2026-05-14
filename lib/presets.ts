@@ -43,18 +43,38 @@ async function upsertPresetVersionAtomic(db: typeof prisma, presetId: string, pa
   }
 }
 
+async function getOrCreatePresetForSeed(db: typeof prisma, input: { stableKey: string; name: string; description: string; bestUseLabel: string | null }) {
+  const existing = await db.preset.findUnique({ where: { stableKey: input.stableKey } });
+  if (existing) return existing;
+  try {
+    return await db.preset.create({
+      data: {
+        stableKey: input.stableKey,
+        name: input.name,
+        description: input.description,
+        bestUseLabel: input.bestUseLabel,
+        isArchived: false
+      }
+    });
+  } catch (error) {
+    const maybe = error as { code?: string } | null;
+    if (maybe?.code === "P2002") {
+      const conflicted = await db.preset.findUnique({ where: { stableKey: input.stableKey } });
+      if (conflicted) return conflicted;
+      throw new Error("Preset create conflicted but existing preset was not found.");
+    }
+    throw error;
+  }
+}
+
 export async function seedPresetsFromConfig(db: typeof prisma = prisma): Promise<void> {
   for (const item of presets as Array<Record<string, any>>) {
     const stableKey = String(item.id);
-    const existingPreset = await db.preset.findUnique({ where: { stableKey } });
-    const preset = existingPreset ?? await db.preset.create({
-      data: {
-        stableKey,
-        name: String(item.name),
-        description: String(item.description),
-        bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null,
-        isArchived: false
-      }
+    const preset = await getOrCreatePresetForSeed(db, {
+      stableKey,
+      name: String(item.name),
+      description: String(item.description),
+      bestUseLabel: item.bestUseLabel ? String(item.bestUseLabel) : null
     });
 
     const defaultProvider = assertSupportedProvider(String(item.defaultProvider));
