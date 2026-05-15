@@ -1,0 +1,66 @@
+[
+  {
+    "id": "kids_vector_card_illustration_v1",
+    "name": "Kids Vector Card Illustration",
+    "version": "v1",
+    "description": "Playful learning cards with friendly characters and crisp shapes.",
+    "bestUseLabel": "Kids cards",
+    "samplePrompt": "A smiling red panda astronaut waving on a moon rock, bright 2D vector card illustration, no text",
+    "stylePrompt": "Flat vector illustration, clear silhouette, playful proportions, rounded shapes, bright friendly palette, strong contrast, minimal background distractions, no text, no watermark.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "clean_sticker_character_white_bg_v1",
+    "name": "Clean Sticker Character (White BG)",
+    "version": "v1",
+    "description": "Sticker-ready single character on pure white with clean cutout edges.",
+    "bestUseLabel": "Sticker character",
+    "samplePrompt": "A happy baby dinosaur in rain boots holding a yellow umbrella, centered sticker on white background, no text",
+    "stylePrompt": "Single cute character sticker, centered composition, crisp outline, high readability at small sizes, white background, no scene clutter, no text, printable feel.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1024x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "storybook_habitat_background_concept_v1",
+    "name": "Storybook Habitat Background Concept",
+    "version": "v1",
+    "description": "Cozy storybook habitat scenes with clear depth and gentle lighting.",
+    "bestUseLabel": "Storybook scene",
+    "samplePrompt": "A calm forest reading nook with mushrooms, lantern glow, and winding path, cozy storybook background, no text",
+    "stylePrompt": "Storybook environment concept art, gentle brush texture, layered depth, cozy lighting, child-friendly realism, coherent color story, no characters unless requested, no text.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1536x1024",
+      "quality": "high",
+      "count": 1
+    }
+  },
+  {
+    "id": "amazon_photoreal_lifestyle_product_v1",
+    "name": "Amazon Photoreal Lifestyle Product",
+    "version": "v1",
+    "description": "Realistic lifestyle product hero scene in a clean, family-friendly setting.",
+    "bestUseLabel": "Product lifestyle",
+    "samplePrompt": "A realistic tabletop photo of a kids puzzle set beside crayons and a glass of juice in warm morning light, no logos, no text",
+    "stylePrompt": "Photorealistic lifestyle product scene, realistic lighting and shadows, natural materials, accurate product proportions, commercially clean composition, high detail, no text overlays, no logos.",
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-image-2",
+    "defaultParams": {
+      "size": "1536x1024",
+      "quality": "high",
+      "count": 1
+    }
+  }
+]
