@@ -30,7 +30,7 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
   return (
     <section className={card}>
       <h3 className="text-lg font-semibold">Selected Image</h3>
-      <p className="mt-1 text-sm text-slate-600">Review this image, then choose your next step.</p>
+      <p className="mt-1 text-sm text-slate-600">Review this image, then edit, compare, or approve your final pick.</p>
 
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
         {task.imageUrl ? (
@@ -46,12 +46,12 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
         <span className={chipSoft}>{getReviewStatusLabel(task.reviewStatus)}</span>
       </div>
 
-      <p className="mt-2 text-sm">
-        <strong>Prompt:</strong> {task.subjectPrompt.slice(0, 140)}
+      <p className="mt-2 text-sm leading-6">
+        <strong>Prompt:</strong> {task.subjectPrompt.slice(0, 180)}
       </p>
 
       {task.mode === "edit" ? (
-        <p className="text-xs text-indigo-700">Edited from previous image · {task.editInstruction?.slice(0, 84) ?? "Instruction unavailable"}</p>
+        <p className="text-xs text-indigo-700">Edited from previous image · {task.editInstruction?.slice(0, 120) ?? "Instruction unavailable"}</p>
       ) : null}
 
       {task.mode === "edit" && sourceTask?.imageUrl ? (

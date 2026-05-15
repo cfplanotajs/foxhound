@@ -105,10 +105,12 @@ Foxhound helps designers create, edit, review, and export consistent visual asse
 
 ## Demo Mode vs OpenAI mode
 - **Demo Mode (mock)**
+  - local placeholders, no OpenAI credits
   - no external API calls
   - generates deterministic placeholder images
-  - validates end-to-end workflow without usage credits
+  - validates end-to-end workflow as a safe dry run
 - **OpenAI mode**
+  - real images and edits via server-side setup
   - requires server-side `OPENAI_API_KEY`
   - never use `NEXT_PUBLIC_OPENAI_API_KEY`
   - model/size/quality are validated server-side
