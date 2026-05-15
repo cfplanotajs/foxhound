@@ -260,6 +260,29 @@ test("create supports mock quality path", async () => {
   (prisma.preset as any).create = origCreate;
 });
 
+test("create accepts valid flexible gpt-image size", async () => {
+  const origCreate = prisma.preset.create;
+  let createdArgs: any = null;
+  (prisma.preset as any).create = async (args: any) => { createdArgs = args; return { id: "gpt-flex" }; };
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "gpt_flex", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: { size: "1536x1536" } })
+  }));
+  assert.equal(res.status, 200);
+  const params = JSON.parse(createdArgs.data.versions.create.defaultParamsJson);
+  assert.equal(params.size, "1536x1536");
+  (prisma.preset as any).create = origCreate;
+});
+
+test("create rejects invalid flexible gpt-image size", async () => {
+  const res = await POST(new Request("http://x", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", stableKey: "gpt_bad_flex", name: "Preset", stylePrompt: "Style", defaultProvider: "openai", defaultModel: "gpt-image-2", defaultParams: { size: "1535x1536" } })
+  }));
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, "Size 1535x1536 is not supported by model gpt-image-2.");
+});
+
 test("create rejects incompatible default size for selected model", async () => {
   const res = await POST(new Request("http://x", {
     method: "POST",

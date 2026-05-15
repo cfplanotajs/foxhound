@@ -8,6 +8,11 @@ test("keeps compatible GPT defaults", () => {
   assert.equal(out.quality, "high");
 });
 
+test("preserves valid flexible GPT size not listed in model allowedSizes", () => {
+  const out = normalizePresetDefaultsForModel({ provider: "openai", model: "gpt-image-2", defaultParams: { size: "1536x1536", quality: "high" } });
+  assert.equal(out.size, "1536x1536");
+});
+
 test("remaps GPT landscape defaults for dall-e-3", () => {
   const out = normalizePresetDefaultsForModel({ provider: "openai", model: "dall-e-3", defaultParams: { size: "1536x1024", quality: "high" } });
   assert.equal(out.size, "1792x1024");
@@ -38,15 +43,15 @@ test("maps non-square portrait defaults to safe square for dall-e-2", () => {
   assert.equal(out.quality, "standard");
 });
 
-test("remaps dall-e-3 landscape defaults to gpt landscape", () => {
+test("preserves valid dall-e-3 landscape defaults when switching to gpt model", () => {
   const out = normalizePresetDefaultsForModel({ provider: "openai", model: "gpt-image-2", defaultParams: { size: "1792x1024", quality: "auto" } });
-  assert.equal(out.size, "1536x864");
+  assert.equal(out.size, "1792x1024");
   assert.equal(out.quality, "auto");
 });
 
-test("remaps dall-e-3 portrait defaults to gpt portrait", () => {
+test("preserves valid dall-e-3 portrait defaults when switching to gpt model", () => {
   const out = normalizePresetDefaultsForModel({ provider: "openai", model: "gpt-image-2", defaultParams: { size: "1024x1792", quality: "medium" } });
-  assert.equal(out.size, "1152x2048");
+  assert.equal(out.size, "1024x1792");
   assert.equal(out.quality, "medium");
 });
 

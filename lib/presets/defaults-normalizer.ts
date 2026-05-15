@@ -1,6 +1,6 @@
 import { inferAspectRatioFromSize } from "@/lib/jobs/task-size";
 import { resolveSizeForModel } from "@/lib/providers/image-size-presets";
-import { getOpenAIModelSpec } from "@/lib/providers/openai-models";
+import { isSizeSupportedForOpenAIModel } from "@/lib/providers/openai-models";
 import { getDefaultQualityForModel, getQualityOptionsForModel } from "@/lib/providers/model-quality";
 
 type SizeOrientation = "landscape" | "portrait" | "square";
@@ -30,9 +30,7 @@ function resolveFallbackSizeByOrientation(model: string, orientation: SizeOrient
 
 function resolveCompatiblePresetSizeForModel(model: string, rawSize: string | null): string | null {
   if (!rawSize) return resolveSizeForModel(model, "1:1");
-  const spec = getOpenAIModelSpec(model);
-  if (!spec) return rawSize;
-  if (spec.allowedSizes.includes(rawSize)) return rawSize;
+  if (isSizeSupportedForOpenAIModel(model, rawSize)) return rawSize;
 
   const inferredRatio = inferAspectRatioFromSize(rawSize);
   if (inferredRatio) {

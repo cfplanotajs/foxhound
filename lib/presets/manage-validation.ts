@@ -1,14 +1,13 @@
 import { isSupportedOpenAIModel } from "@/lib/providers/openai-models";
 import { assertSupportedProvider } from "@/lib/providers/supported";
 import { getQualityOptionsForModel, resolveEffectiveQuality } from "@/lib/providers/model-quality";
-import { getOpenAIModelSpec } from "@/lib/providers/openai-models";
+import { isSizeSupportedForOpenAIModel } from "@/lib/providers/openai-models";
 
 
 
 function validatePresetDefaultSize(input: { provider: "openai" | "mock"; model: string; size: string }) {
   if (input.provider === "mock") return;
-  const spec = getOpenAIModelSpec(input.model);
-  if (!spec || !spec.allowedSizes.includes(input.size)) {
+  if (!isSizeSupportedForOpenAIModel(input.model, input.size)) {
     throw new Error(`Size ${input.size} is not supported by model ${input.model}.`);
   }
 }
