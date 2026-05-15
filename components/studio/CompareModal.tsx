@@ -28,7 +28,7 @@ export function CompareModal({ task, sourceUrl, onClose }: { task: CompareTask |
     <section className="fixed inset-0 z-20 bg-slate-900/60 p-4 md:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby="compare-modal-title" className={`mx-auto max-w-5xl md:p-5 ${card} shadow-2xl`}>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 id="compare-modal-title" className={sectionHeader}>Compare Edit</h3>
+          <h3 id="compare-modal-title" className={sectionHeader}>Compare</h3>
           <button className={buttonSecondary} onClick={onClose} aria-label="Close compare dialog">Close</button>
         </div>
         <p className={`mb-3 rounded-lg bg-slate-50 px-3 py-2 ${helperText}`}><span className="font-medium">Instruction:</span> {snippet}</p>

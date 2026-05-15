@@ -4,7 +4,7 @@ export function ReviewToolbar({ reviewFilter, setReviewFilter, reviewError }: { 
   return (
     <>
       <p className="mt-2 text-xs text-slate-600">Approved = ready to use · Favorite = promising · Rejected = not useful</p>
-      <p className="mt-1 text-xs text-slate-500">Approved-only ZIP downloads only completed images currently marked Approved.</p>
+      <p className="mt-1 text-xs text-slate-500">Download Approved includes only completed images marked Approved.</p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         {(["all", "favorite", "approved", "rejected"] as const).map((f) => (
           <button key={f} className={reviewFilter === f ? `${buttonStrongSecondary} rounded-full px-3 py-1.5 text-xs` : `${buttonSecondary} rounded-full px-3 py-1.5 text-xs`} onClick={() => setReviewFilter(f)}>

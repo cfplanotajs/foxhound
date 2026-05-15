@@ -94,14 +94,14 @@ Foxhound helps designers create, edit, review, and export consistent visual asse
 
 ### Demo flow
 1. Start app + worker (`npm run dev` and `npm run worker`).
-2. Select **Demo Mode (Mock)**.
+2. Select **Start in Demo Mode**.
 3. Pick a preset.
 4. Generate multiple variations.
 5. Mark one result as **Approved** (or **Favorite**).
 6. Edit that result with instruction like: `white background, clean artifacts`.
 7. Use **Compare** to review original vs edited output.
 8. Download **Approved ZIP**.
-9. If API key and credits are available, switch provider to **OpenAI** and repeat generate/edit.
+9. If API key and credits are available, switch provider to **OpenAI Mode** and repeat generate/edit.
 
 ## Demo Mode vs OpenAI mode
 - **Demo Mode (mock)**
@@ -123,7 +123,7 @@ Foxhound helps designers create, edit, review, and export consistent visual asse
 ## Troubleshooting
 - **Jobs stay queued / nothing processes:** ensure `npm run worker` is running in a separate terminal.
 - **Prisma client/migrations errors:** run `npm run prisma:generate` and `npm run prisma:migrate`.
-- **OpenAI provider setup error:** set `OPENAI_API_KEY` in `.env` (server-side only).
+- **OpenAI setup error:** set `OPENAI_API_KEY` in `.env` (server-side only).
 - **OpenAI billing/credits failures:** use Demo Mode or add credits/enable billing in OpenAI account.
 - **Missing image file errors:** output file may have been removed from disk; re-run the job.
 - **Approved ZIP returns empty/400:** mark at least one image as Approved before using approved-only download.

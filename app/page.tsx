@@ -36,6 +36,14 @@ function statusChip(status: string) {
   return <span className={`rounded-full px-2 py-1 text-xs font-semibold ${map[status] ?? map.queued}`}>{status}</span>;
 }
 
+function getFriendlyPrimaryError(message: string, provider: string) {
+  const lower = message.toLowerCase();
+  if (provider === "openai" && (lower.includes("openai_api_key") || lower.includes("api key") || lower.includes("openai"))) {
+    return "OpenAI setup is needed. Use Demo Mode for now.";
+  }
+  return message;
+}
+
 export default function DashboardPage() {
   // state declarations
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -145,7 +153,7 @@ export default function DashboardPage() {
       await refreshJob(data.jobId);
       await refreshImages(data.jobId);
     } else {
-      setError(data.error ?? "Failed to submit job");
+      setError(getFriendlyPrimaryError(data.error ?? "Failed to submit job", provider));
     }
     setLoading(false);
   }
@@ -551,9 +559,9 @@ export default function DashboardPage() {
                     <p className="text-sm text-slate-600">Job ID: {jobId}</p>
                     <p className="text-sm text-slate-600">Status: {jobStatus}</p>
                     <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
-                    {workflow.isProcessing ? <p className="text-sm text-indigo-700">Worker is creating your images… If this stays here, make sure the worker is running.</p> : null}
+                    {workflow.isProcessing ? <p className="text-sm text-indigo-700">Worker is creating your images…</p> : null}
                     {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
-                    {showGalleryTip ? <><div className="mt-1"><button className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600" onClick={() => setShowGalleryTip(false)}>Hide tips</button></div>{workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download an approved-only ZIP.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}</> : null}
+                    {showGalleryTip ? <><div className="mt-1"><button className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600" onClick={() => setShowGalleryTip(false)}>Hide tips</button></div>{workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download approved assets.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}</> : null}
                   </div>
                   {renderDownloadActions()}
                 </div>
