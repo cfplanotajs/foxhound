@@ -15,6 +15,11 @@ test("GPT payload missing quality falls back safely and never emits undefined", 
   assert.equal(payload.quality === undefined, false);
 });
 
+test("GPT payload accepts valid flexible size", () => {
+  const payload = buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 1, size: "1536x1536" });
+  assert.equal(payload.size, "1536x1536");
+});
+
 test("dall-e-3 quality normalizes to standard/hd only", () => {
   const standard = buildOpenAIImagePayload({ provider: "openai", model: "dall-e-3", prompt: "cat", count: 3, size: "1024x1024", quality: "high" });
   assert.equal(standard.quality, "standard");
@@ -36,6 +41,7 @@ test("unsupported model rejects clearly", () => {
 
 test("unsupported model-size combination rejects clearly", () => {
   assert.throws(() => buildOpenAIImagePayload({ provider: "openai", model: "dall-e-3", prompt: "cat", count: 1, size: "1536x1024" }), /is not supported by model/);
+  assert.throws(() => buildOpenAIImagePayload({ provider: "openai", model: "gpt-image-2", prompt: "cat", count: 1, size: "1535x1536" }), /is not supported by model/);
 });
 
 test("GPT response parses b64_json correctly", async () => {
