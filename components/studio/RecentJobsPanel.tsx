@@ -6,11 +6,11 @@ type RecentJob = { id: string; status: string; provider: string; model: string; 
 export function RecentJobsPanel({ recentJobs, toast, jobId, rowLoadingId, statusChip, onOpen, onDuplicate, onRerun }: { recentJobs: RecentJob[]; toast: string; jobId: string; rowLoadingId: string | null; statusChip: (status: string) => ReactNode; onOpen: (jobId: string) => void; onDuplicate: (jobId: string) => void; onRerun: (jobId: string) => void }) {
   return (
     <section className={card}>
-      <h2 className="text-lg font-semibold">Recent Jobs</h2>
+      <h2 className="text-lg font-semibold">Recent Runs</h2>
       <p className={subtleText}>Duplicate copies settings into the form. Re-run starts a new job right away.</p>
       {toast ? <p role="status" aria-live="polite" className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{toast}</p> : null}
       <div className="mt-3 grid gap-2">
-        {recentJobs.length === 0 ? <p className={emptyState}>No jobs yet. Choose a preset, add a prompt, and click Generate Images.</p> : recentJobs.map((j) => (
+        {recentJobs.length === 0 ? <p className={emptyState}>No runs yet. Choose a preset, add a prompt, and click Generate Images.</p> : recentJobs.map((j) => (
           <div key={j.id} className={`rounded-xl border p-3 text-sm ${jobId === j.id ? selectedRow : "border-slate-200 bg-white"}`}>
             <div className="flex items-start justify-between gap-3">
               <div>

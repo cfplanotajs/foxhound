@@ -4,6 +4,7 @@ export function ReviewToolbar({ reviewFilter, setReviewFilter, reviewError }: { 
   return (
     <>
       <p className="mt-2 text-xs text-slate-600">Approved = ready to use · Favorite = promising · Rejected = not useful</p>
+      <p className="mt-1 text-xs text-emerald-700">Approve your final picks, then export only what’s ready.</p>
       <p className="mt-1 text-xs text-slate-500">Approve completed images, then download only the approved assets.</p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         {(["all", "favorite", "approved", "rejected"] as const).map((f) => (

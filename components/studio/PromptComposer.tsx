@@ -12,12 +12,12 @@ export function PromptComposer({ presets, setPresetId, setSinglePrompt, error, s
         <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Start here</p>
         <p className="mt-1 text-sm text-blue-900">Start with a preset prompt, then generate a few variations.</p>
       </div>
-      <p className={`mt-3 ${helperText}`}>Describe the image or paste multiple prompts (one per line).</p>
+      <p className={`mt-3 ${helperText}`}>Choose a curated starter prompt below, then customize it.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {presets.map((p) => (
           <button key={p.id} type="button" className={`${chipSoft} text-left`} onClick={() => { setPresetId(p.id); if (p.samplePrompt) setSinglePrompt(p.samplePrompt); }}>
             <span className="block text-xs font-semibold text-slate-800">{p.name}</span>
-            <span className="block text-[11px] text-slate-600">{p.samplePrompt ? "Use starter prompt" : "Set as active preset"}</span>
+            <span className="block text-[11px] text-slate-600">{p.samplePrompt ? "Recommended starter" : "Set as active preset"}</span>
           </button>
         ))}
       </div>

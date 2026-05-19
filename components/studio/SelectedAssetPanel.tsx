@@ -29,6 +29,7 @@ export function SelectedAssetPanel({ task, sourceTask, reviewUpdatingId, setEdit
 
   return (
     <section className={card}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewing this image</p>
       <h3 className="text-lg font-semibold">Selected Image</h3>
       <p className="mt-1 text-sm text-slate-600">Review this image, then edit, compare, or approve your final pick.</p>
 

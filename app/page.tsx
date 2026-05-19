@@ -556,9 +556,9 @@ export default function DashboardPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold">Gallery & Review</h2>
-                    <p className="text-sm text-slate-600">Job ID: {jobId}</p>
-                    <p className="text-sm text-slate-600">Status: {jobStatus}</p>
-                    <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · Queued/Processing: {counts.queued}</p>
+                    <p className="text-sm text-slate-600">Run ID: {jobId}</p>
+                    <p className="text-sm text-slate-600">Run status: {jobStatus}</p>
+                    <p className="text-sm text-slate-600">Complete: {counts.complete} · Failed: {counts.failed} · In progress: {counts.queued}</p>
                     {workflow.isProcessing ? <p className="text-sm text-indigo-700">Worker is creating your images…</p> : null}
                     {workflow.hasEdited && workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Compare edited results, then approve one final image.</p> : null}
                     {showGalleryTip ? <><div className="mt-1"><button className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600" onClick={() => setShowGalleryTip(false)}>Hide tips</button></div>{workflow.approvedCount === 0 ? <p className="text-sm text-slate-600">Approve one completed image to download approved assets.</p> : <p className="text-sm text-emerald-700">Finish step unlocked: Approved ZIP is ready to download.</p>}</> : null}
