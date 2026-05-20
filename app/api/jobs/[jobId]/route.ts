@@ -25,6 +25,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
       }
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

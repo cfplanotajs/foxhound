@@ -149,7 +149,7 @@ npm run build
 - Use Projects to group related studio workstreams.
 - Use Folders inside a project for optional sub-grouping.
 - New jobs can be submitted as Unassigned, Project-only, or Project+Folder.
-- Recent Jobs respects selected Project/Folder filters.
+- Recent Runs respects selected Project/Folder filters.
 - Existing legacy jobs remain valid as Unassigned.
 
 ### Migration

@@ -49,3 +49,13 @@ test("job detail route returns sanitized task DTOs", async () => {
   (prisma.generationJob as any).findUnique = orig;
 });
 
+test("job detail route returns safe 500 on unexpected errors", async () => {
+  const orig = prisma.generationJob.findUnique;
+  (prisma.generationJob as any).findUnique = async () => {
+    throw new Error("db exploded");
+  };
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  assert.equal(res.status, 500);
+  assert.equal((await res.json()).error, "Internal server error");
+  (prisma.generationJob as any).findUnique = orig;
+});
