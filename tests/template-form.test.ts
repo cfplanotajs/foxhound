@@ -10,6 +10,7 @@ test("applyJobTemplateToFormState keeps explicit aspect ratio", () => {
     aspectRatio: "16:9"
   });
   assert.equal(out.aspectRatio, "16:9");
+  assert.equal(out.aspectRatioSelection, "16:9");
   assert.equal(out.aspectRatioTouched, true);
 });
 
@@ -21,6 +22,7 @@ test("applyJobTemplateToFormState clears touched ratio when missing", () => {
     aspectRatio: null
   });
   assert.equal(out.aspectRatio, "1:1");
+  assert.equal(out.aspectRatioSelection, "preset-default");
   assert.equal(out.aspectRatioTouched, false);
 });
 

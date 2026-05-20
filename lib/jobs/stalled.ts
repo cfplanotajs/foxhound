@@ -8,9 +8,13 @@ export interface StalledTask {
   nextAttemptAt: Date | null;
 }
 
-export function isJobStalled(startedAt: Date | null, now: Date, stalledAfterMs: number): boolean {
-  if (!startedAt) return false;
-  return startedAt.getTime() <= now.getTime() - stalledAfterMs;
+export function isJobStalled(stalledRefAt: Date | null, now: Date, stalledAfterMs: number): boolean {
+  if (!stalledRefAt) return false;
+  return stalledRefAt.getTime() <= now.getTime() - stalledAfterMs;
+}
+
+export function getStalledReferenceTime(job: { processingHeartbeatAt?: Date | null; startedAt?: Date | null }): Date | null {
+  return job.processingHeartbeatAt ?? job.startedAt ?? null;
 }
 
 export function shouldRetryAfterStall(task: StalledTask): boolean {

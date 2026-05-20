@@ -6,12 +6,13 @@ import { computeBackoffMs, shouldRetry } from "@/lib/jobs/retry";
 import { buildProviderRequest, extractTaskParams, mergeProviderPayload } from "@/lib/jobs/provider-payload";
 import { normalizeProviderError } from "@/lib/providers/error-normalizer";
 import { hasActionableTask, shouldRequeueAfterPass } from "@/lib/jobs/actionable";
-import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
-import { getWorkerMaxAttempts, getWorkerRetryBaseMs, getWorkerStalledAfterMs } from "@/lib/jobs/worker-config";
+import { getStalledReferenceTime, isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall, StalledTask } from "@/lib/jobs/stalled";
+import { getWorkerHeartbeatIntervalMs, getWorkerMaxAttempts, getWorkerRetryBaseMs, getWorkerStalledAfterMs } from "@/lib/jobs/worker-config";
 
 const WORKER_MAX_ATTEMPTS = getWorkerMaxAttempts();
 const WORKER_RETRY_BASE_MS = getWorkerRetryBaseMs();
 const WORKER_STALLED_AFTER_MS = getWorkerStalledAfterMs();
+const WORKER_HEARTBEAT_INTERVAL_MS = getWorkerHeartbeatIntervalMs(WORKER_STALLED_AFTER_MS);
 
 function isActionableDuringSetupFailure(task: { status: string; attempts: number; maxAttempts: number; nextAttemptAt: Date | null }, now: Date): boolean {
   if (task.status === "queued" || task.status === "processing") return true;
@@ -49,7 +50,7 @@ export async function recoverStalledProcessingJobs(logger: Pick<Console, "info" 
   const processingJobs = await prisma.generationJob.findMany({ where: { status: "processing" }, include: { tasks: true } });
 
   for (const job of processingJobs) {
-    if (!isJobStalled(job.startedAt, now, WORKER_STALLED_AFTER_MS)) continue;
+    if (!isJobStalled(getStalledReferenceTime(job), now, WORKER_STALLED_AFTER_MS)) continue;
     logger.info(`[worker] reclaiming stalled job ${job.id}`);
 
     for (const task of job.tasks) {
@@ -101,11 +102,22 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
 
   const claim = await prisma.generationJob.updateMany({
     where: { id: queued.id, status: "queued" },
-    data: { status: "processing", startedAt: new Date() }
+    data: { status: "processing", startedAt: new Date(), processingHeartbeatAt: new Date() }
   });
   if (claim.count !== 1) return null;
 
   logger.info(`[worker] job claimed ${queued.id}`);
+  let lastHeartbeatAt = Date.now();
+  const touchHeartbeat = async () => {
+    const nowMs = Date.now();
+    if (nowMs - lastHeartbeatAt < WORKER_HEARTBEAT_INTERVAL_MS) return;
+    lastHeartbeatAt = nowMs;
+    try {
+      await prisma.generationJob.update({ where: { id: queued.id }, data: { processingHeartbeatAt: new Date(nowMs) } });
+    } catch (error) {
+      logger.error(`[worker] heartbeat update failed ${queued.id}: ${(error as Error).message}`);
+    }
+  };
   let provider;
   try {
     provider = getProvider(queued.provider as "openai" | "mock");
@@ -129,6 +141,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
     : null;
 
   for (const task of tasks) {
+    await touchHeartbeat();
     if (task.status === "failed" && !(task.attempts < task.maxAttempts && !!task.nextAttemptAt && task.nextAttemptAt <= new Date())) continue;
 
     const taskClaim = await prisma.generationTask.updateMany({
@@ -163,6 +176,7 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
         }
       });
       const result = await provider.generateImage(providerRequest);
+      await touchHeartbeat();
 
       const outputPath = await saveImage(task.jobId, task.id, result.images[0].bytes);
       await prisma.generationTask.update({
@@ -203,13 +217,13 @@ export async function processNextQueuedJob(logger: Pick<Console, "info" | "error
 
   const finishedTasks = await prisma.generationTask.findMany({ where: { jobId: queued.id } });
   if (shouldRequeueAfterPass(finishedTasks as Array<{ status: string; attempts: number; maxAttempts: number; nextAttemptAt?: Date | null }>, new Date())) {
-    await prisma.generationJob.update({ where: { id: queued.id }, data: { status: "queued" } });
+    await prisma.generationJob.update({ where: { id: queued.id }, data: { status: "queued", processingHeartbeatAt: null } });
     logger.info(`[worker] job waiting ${queued.id}`);
     return queued.id;
   }
 
   const status = aggregateJobStatus(finishedTasks.map((task: { status: string }) => task.status as TaskLikeStatus));
-  await prisma.generationJob.update({ where: { id: queued.id }, data: { status, completedAt: new Date() } });
+  await prisma.generationJob.update({ where: { id: queued.id }, data: { status, completedAt: new Date(), processingHeartbeatAt: null } });
   logger.info(`[worker] job ${status} ${queued.id}`);
 
   return queued.id;

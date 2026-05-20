@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDefaultQualityForModel, getQualityOptionsForModel, normalizeQualityForModel } from "@/lib/providers/model-quality";
 import { splitTemplatePrompts } from "@/lib/jobs/template-prompts";
-import { applyJobTemplateToFormState } from "@/lib/jobs/template-form";
+import { applyJobTemplateToFormState, PRESET_DEFAULT_ASPECT_RATIO } from "@/lib/jobs/template-form";
 import { appendEditChip, buildEditRequestPayload, canEditTask } from "@/lib/jobs/edit-ui";
 import { filterTasksByReview, getReviewStatusLabel, ReviewStatus } from "@/lib/review-ui";
 import { HeroHeader } from "@/components/studio/HeroHeader";
@@ -54,6 +54,7 @@ export default function DashboardPage() {
   const [provider, setProvider] = useState("openai");
   const [model, setModel] = useState("gpt-image-2");
   const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [aspectRatioSelection, setAspectRatioSelection] = useState(PRESET_DEFAULT_ASPECT_RATIO);
   const [aspectRatioTouched, setAspectRatioTouched] = useState(false);
   const [variationCount, setVariationCount] = useState(1);
   const [quality, setQuality] = useState("high");
@@ -203,6 +204,7 @@ export default function DashboardPage() {
     setProvider(appliedTemplate.provider);
     setModel(appliedTemplate.model);
     setAspectRatio(appliedTemplate.aspectRatio);
+    setAspectRatioSelection(appliedTemplate.aspectRatioSelection);
     setAspectRatioTouched(appliedTemplate.aspectRatioTouched);
     setConstraints(appliedTemplate.constraints);
     setProjectId(tpl.projectId ?? "");
@@ -436,6 +438,8 @@ export default function DashboardPage() {
     setVariationCount,
     quality,
     setQuality,
+    aspectRatioSelection,
+    setAspectRatioSelection,
     projectId,
     setProjectId,
     folderId,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall } from "../lib/jobs/stalled.ts";
+import { getStalledReferenceTime, isJobStalled, reconcileJobStatusFromTasks, shouldRetryAfterStall } from "../lib/jobs/stalled.ts";
 
 test("processing job older than timeout is stale", () => {
   const now = new Date("2026-01-01T00:10:00Z");
@@ -12,6 +12,23 @@ test("non-stale processing job is not reclaimed", () => {
   const now = new Date("2026-01-01T00:01:00Z");
   const started = new Date("2026-01-01T00:00:00Z");
   assert.equal(isJobStalled(started, now, 5 * 60_000), false);
+});
+
+test("stalled reference prefers heartbeat when present", () => {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  const startedAt = new Date("2025-12-31T00:00:00.000Z");
+  const processingHeartbeatAt = new Date("2025-12-31T23:59:30.000Z");
+  const ref = getStalledReferenceTime({ startedAt, processingHeartbeatAt });
+  assert.equal(ref?.toISOString(), processingHeartbeatAt.toISOString());
+  assert.equal(isJobStalled(ref, now, 120000), false);
+});
+
+test("stalled reference falls back to startedAt when heartbeat missing", () => {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  const startedAt = new Date("2025-12-31T23:57:00.000Z");
+  const ref = getStalledReferenceTime({ startedAt, processingHeartbeatAt: null });
+  assert.equal(ref?.toISOString(), startedAt.toISOString());
+  assert.equal(isJobStalled(ref, now, 120000), true);
 });
 
 test("stalled processing task with attempts remaining becomes retryable", () => {

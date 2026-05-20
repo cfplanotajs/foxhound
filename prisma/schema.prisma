@@ -74,6 +74,7 @@ model GenerationJob {
   idempotencyKey String?          @unique
   createdAt      DateTime         @default(now())
   startedAt      DateTime?
+  processingHeartbeatAt DateTime?
   completedAt    DateTime?
   projectId      String?
   folderId       String?

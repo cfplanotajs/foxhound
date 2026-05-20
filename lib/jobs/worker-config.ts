@@ -23,3 +23,10 @@ export function getWorkerPollIntervalMs(): number {
 export function getWorkerStalledAfterMs(): number {
   return parsePositiveIntEnv(process.env.WORKER_STALLED_AFTER_MS, 900000, 60000, 86400000);
 }
+
+export function getWorkerHeartbeatIntervalMs(stalledAfterMs: number): number {
+  const derived = Math.floor(stalledAfterMs / 3);
+  if (derived < 5000) return 5000;
+  if (derived > 30000) return 30000;
+  return derived;
+}

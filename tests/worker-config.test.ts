@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getWorkerMaxAttempts, getWorkerPollIntervalMs, getWorkerRetryBaseMs, getWorkerStalledAfterMs, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
+import { getWorkerHeartbeatIntervalMs, getWorkerMaxAttempts, getWorkerPollIntervalMs, getWorkerRetryBaseMs, getWorkerStalledAfterMs, parsePositiveIntEnv } from "../lib/jobs/worker-config.ts";
 
 test("missing value falls back to default", () => {
   assert.equal(parsePositiveIntEnv(undefined, 3), 3);
@@ -83,4 +83,10 @@ test("getWorkerStalledAfterMs sanitizes malformed values", () => {
   process.env.WORKER_STALLED_AFTER_MS = "120000";
   assert.equal(getWorkerStalledAfterMs(), 120000);
   process.env.WORKER_STALLED_AFTER_MS = old;
+});
+
+test("getWorkerHeartbeatIntervalMs stays within safe bounds", () => {
+  assert.equal(getWorkerHeartbeatIntervalMs(60000), 20000);
+  assert.equal(getWorkerHeartbeatIntervalMs(900000), 30000);
+  assert.equal(getWorkerHeartbeatIntervalMs(12000), 5000);
 });
