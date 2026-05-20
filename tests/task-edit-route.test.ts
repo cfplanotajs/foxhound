@@ -108,6 +108,52 @@ test("edit route rejects mismatched project/folder", async () => {
   restore();
 });
 
+test("edit route treats blank projectId/folderId as unassigned", async () => {
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  const op = prisma.project.findUnique;
+  const ot = prisma.$transaction;
+  (prisma.projectFolder as any).findUnique = async () => null;
+  (prisma.project as any).findUnique = async () => null;
+  let capturedJobData: any = null;
+  (prisma as any).$transaction = async (fn: any) =>
+    fn({
+      generationJob: { create: async ({ data }: any) => ((capturedJobData = data), { id: "j2", ...data }) },
+      generationTask: { createMany: async () => ({}) }
+    });
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", editInstruction: "white bg", projectId: "   ", folderId: "" }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 200);
+  assert.equal(capturedJobData.projectId, null);
+  assert.equal(capturedJobData.folderId, null);
+  (prisma.projectFolder as any).findUnique = of;
+  (prisma.project as any).findUnique = op;
+  (prisma as any).$transaction = ot;
+  restore();
+});
+
+test("edit route treats blank folderId as absent with valid project assignment", async () => {
+  const restore = setupEditableSource();
+  const of = prisma.projectFolder.findUnique;
+  const op = prisma.project.findUnique;
+  const ot = prisma.$transaction;
+  (prisma.projectFolder as any).findUnique = async () => null;
+  (prisma.project as any).findUnique = async ({ where }: any) => (where.id === "p1" ? { id: "p1", isArchived: false } : null);
+  let capturedJobData: any = null;
+  (prisma as any).$transaction = async (fn: any) =>
+    fn({
+      generationJob: { create: async ({ data }: any) => ((capturedJobData = data), { id: "j2", ...data }) },
+      generationTask: { createMany: async () => ({}) }
+    });
+  const res = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ presetId: "p1", editInstruction: "white bg", projectId: " p1 ", folderId: "   " }) }), { params: Promise.resolve({ taskId: "t1" }) });
+  assert.equal(res.status, 200);
+  assert.equal(capturedJobData.projectId, "p1");
+  assert.equal(capturedJobData.folderId, null);
+  (prisma.projectFolder as any).findUnique = of;
+  (prisma.project as any).findUnique = op;
+  (prisma as any).$transaction = ot;
+  restore();
+});
+
 test("edit route returns friendly 400 when openai key missing", async () => {
   const restore = setupEditableSource();
   const prev = process.env.OPENAI_API_KEY;

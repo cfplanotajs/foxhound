@@ -50,6 +50,26 @@ test("template does not invent 1:1 when ratio metadata is missing and size is un
   restore();
 });
 
+test("template prefers explicit metadata aspectRatio", async () => {
+  const restore = withTemplateMocks([
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ taskParams: { size: "1536x1024" }, providerPayload: { aspectRatio: "9:16" }, metadata: { aspectRatio: "16:9" } }) }
+  ]);
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  const data = await res.json();
+  assert.equal(data.template.aspectRatio, "16:9");
+  restore();
+});
+
+test("template returns providerPayload aspectRatio when explicit metadata is missing", async () => {
+  const restore = withTemplateMocks([
+    { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ taskParams: { size: "1536x1024" }, providerPayload: { aspectRatio: "9:16" }, metadata: {} }) }
+  ]);
+  const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
+  const data = await res.json();
+  assert.equal(data.template.aspectRatio, "9:16");
+  restore();
+});
+
 
 
 test("intentional duplicate lines are preserved while variation duplicates collapse", async () => {
@@ -80,12 +100,12 @@ test("legacy tasks without variation metadata keep prompts in order", async () =
 });
 
 
-test("template infers 1:1 from stored 512x512 size", async () => {
+test("template does not infer aspect ratio from size when explicit ratio is missing", async () => {
   const restore = withTemplateMocks([
     { presetId: "p1", presetName: "Preset", presetVersion: "v1", subjectPrompt: "cat", constraints: null, requestPayloadJson: JSON.stringify({ providerPayload: { size: "512x512" }, metadata: {} }) }
   ]);
   const res = await GET(new Request("http://x"), { params: Promise.resolve({ jobId: "j1" }) });
   const data = await res.json();
-  assert.equal(data.template.aspectRatio, "1:1");
+  assert.equal(data.template.aspectRatio, null);
   restore();
 });

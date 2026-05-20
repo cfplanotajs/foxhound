@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseTaskPayload } from "@/lib/jobs/provider-payload";
-import { inferAspectRatioFromSize } from "@/lib/jobs/task-size";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -15,8 +14,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ job
   const size = payload.taskParams.size ?? providerPayload.size ?? null;
   const aspectRatio =
     (typeof metadata.aspectRatio === "string" && metadata.aspectRatio.length > 0 ? metadata.aspectRatio : null) ??
-    (typeof providerPayload.aspectRatio === "string" && providerPayload.aspectRatio.length > 0 ? providerPayload.aspectRatio : null) ??
-    inferAspectRatioFromSize(typeof size === "string" ? size : null);
+    (typeof providerPayload.aspectRatio === "string" && providerPayload.aspectRatio.length > 0 ? providerPayload.aspectRatio : null);
   const promptLines = job.tasks.flatMap((task: any) => {
     const taskPayload = parseTaskPayload(task.requestPayloadJson);
     const variationIndex = Number((taskPayload.metadata as any)?.variationIndex ?? 1);
