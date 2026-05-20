@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  queued
+  processing
+  completed
+  partial_failed
+  failed
+}
+
+enum TaskStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
+enum ReviewStatus {
+  unreviewed
+  favorite
+  approved
+  rejected
+}
+enum JobMode {
+  generate
+  edit
+}
+
+model Preset {
+  id          String          @id @default(cuid())
+  stableKey   String          @unique
+  name        String
+  description String
+  bestUseLabel String?
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    PresetVersion[]
+}
+
+model PresetVersion {
+  id              String   @id @default(cuid())
+  presetId        String
+  preset          Preset   @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  version         String
+  stylePrompt     String
+  defaultProvider String
+  defaultModel    String
+  defaultParamsJson String
+  samplePrompt    String?
+  contentHash     String
+  createdAt       DateTime @default(now())
+
+  @@unique([presetId, version])
+  @@unique([presetId, contentHash])
+}
+
+model GenerationJob {
+  id             String           @id @default(cuid())
+  status         JobStatus        @default(queued)
+  mode           JobMode          @default(generate)
+  provider       String
+  model          String
+  sourceJobId    String?
+  sourceTaskId   String?
+  editInstruction String?
+  idempotencyKey String?          @unique
+  createdAt      DateTime         @default(now())
+  startedAt      DateTime?
+  processingHeartbeatAt DateTime?
+  completedAt    DateTime?
+  projectId      String?
+  folderId       String?
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  folder         ProjectFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tasks          GenerationTask[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  stableKey   String          @unique
+  name        String
+  description String?
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  folders     ProjectFolder[]
+  jobs        GenerationJob[]
+}
+
+model ProjectFolder {
+  id          String         @id @default(cuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stableKey   String
+  name        String
+  description String?
+  isArchived  Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  jobs        GenerationJob[]
+
+  @@unique([projectId, stableKey])
+}
+
+model GenerationTask {
+  id                   String        @id @default(cuid())
+  jobId                String
+  job                  GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  presetId             String
+  presetVersionId      String?
+  presetName           String
+  presetVersion        String
+  stylePromptSnapshot  String
+  defaultProviderSnapshot String?
+  defaultModelSnapshot String?
+  defaultParamsJsonSnapshot String?
+  subjectPrompt        String
+  finalPrompt          String
+  constraints          String?
+  provider             String
+  model                String
+  status               TaskStatus    @default(queued)
+  outputPath           String?
+  errorMessage         String?
+  requestPayloadJson   String?
+  responseMetadataJson String?
+  seed                 Int?
+  attempts             Int           @default(0)
+  maxAttempts          Int           @default(3)
+  nextAttemptAt        DateTime?
+  lastError            String?
+  createdAt            DateTime      @default(now())
+  startedAt            DateTime?
+  completedAt          DateTime?
+  reviewStatus         ReviewStatus  @default(unreviewed)
+  reviewedAt           DateTime?
+}
