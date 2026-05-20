@@ -12,7 +12,8 @@ function normalizeOptionalTrimmedString(value?: string): string | undefined {
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_IMAGE_MODEL: z.string().optional().transform(normalizeOptionalTrimmedString)
+  OPENAI_IMAGE_MODEL: z.string().optional().transform(normalizeOptionalTrimmedString),
+  OPENAI_RESPONSES_MODEL: z.string().optional().transform(normalizeOptionalTrimmedString)
 });
 
 type AppEnv = z.infer<typeof envSchema>;
@@ -28,6 +29,10 @@ export function getOpenAIConfig(): { apiKey: string } {
   const apiKey = getEnv().OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   return { apiKey };
+}
+
+export function getOpenAIResponsesModel(): string {
+  return getEnv().OPENAI_RESPONSES_MODEL ?? "gpt-5";
 }
 
 export function assertProviderConfigured(provider: ProviderName): void {

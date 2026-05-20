@@ -32,6 +32,13 @@ test("OPENAI_IMAGE_MODEL is trimmed when present", () => {
   assert.equal(getEnv().OPENAI_IMAGE_MODEL, "gpt-image-2");
 });
 
+test("OPENAI_RESPONSES_MODEL blank string is treated as undefined", () => {
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
+  process.env.OPENAI_RESPONSES_MODEL = "   ";
+  __resetEnvCacheForTests();
+  assert.equal(getEnv().OPENAI_RESPONSES_MODEL, undefined);
+});
+
 test("openai provider config assertion fails with friendly message", () => {
   process.env.DATABASE_URL = process.env.DATABASE_URL ?? "file:./dev.db";
   delete process.env.OPENAI_API_KEY;

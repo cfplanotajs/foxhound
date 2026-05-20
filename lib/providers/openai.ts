@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { getOpenAIConfig } from "@/lib/env";
+import { getOpenAIConfig, getOpenAIResponsesModel } from "@/lib/env";
 import { assertSupportedOpenAIModel, isSizeSupportedForOpenAIModel } from "@/lib/providers/openai-models";
 import { ImageProvider, NormalizedImageRequest, NormalizedImageResult } from "@/lib/providers/types";
 
@@ -157,11 +157,12 @@ export class OpenAIProvider implements ImageProvider {
 
   private async editImageWithResponses(request: NormalizedImageRequest): Promise<NormalizedImageResult> {
     const spec = assertSupportedOpenAIModel(request.model);
+    const responsesModel = getOpenAIResponsesModel();
     const { bytes, mimeType } = await this.loadSourceImage(request);
     const b64 = bytes.toString("base64");
     const imageUrl = `data:${mimeType};base64,${b64}`;
     const response = await (this.client as any).responses.create({
-      model: spec.id,
+      model: responsesModel,
       input: [
         {
           role: "user",
@@ -180,6 +181,8 @@ export class OpenAIProvider implements ImageProvider {
         mode: "edit",
         adapter: "responses",
         model: spec.id,
+        responsesModel,
+        imageModel: spec.id,
         size: request.size ?? null,
         quality: request.quality ?? null,
         sourceTaskId: request.sourceTaskId ?? null,

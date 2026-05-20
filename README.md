@@ -24,7 +24,8 @@ Preset → Prompt composition → Job enqueue → Worker processes queued jobs �
 3. Configure `.env`:
    - `DATABASE_URL` (required)
    - `OPENAI_API_KEY` (optional for Demo Mode, required for OpenAI mode)
-   - `OPENAI_IMAGE_MODEL` (optional model override)
+   - `OPENAI_IMAGE_MODEL` (optional image-model override for generation/image paths)
+   - `OPENAI_RESPONSES_MODEL` (optional top-level model for Responses edit adapter; defaults to `gpt-5`)
    - `OPENAI_EDIT_ADAPTER` (optional, `responses` or `images_edit`)
    - `FOXHOUND_STORAGE_DIR` (optional; leave blank for default `./generated`)
    - worker tuning envs are optional and have safe defaults
@@ -163,6 +164,7 @@ npm run prisma:generate
 - Edit jobs are linked to source lineage (`mode=edit`, `sourceJobId`, `sourceTaskId`, `editInstruction`).
 - Demo/Mock provider supports edit-mode processing end-to-end.
 - OpenAI edit mode prefers the OpenAI **Responses API** image-generation tool adapter when available, and falls back to **Images Edit**.
+- Responses adapter uses `OPENAI_RESPONSES_MODEL` as the top-level model and keeps the GPT image model for image tool/output handling.
 - Source image is loaded server-side from completed task output; source files are never exposed to client DTOs.
 - Completed image cards now expose an Edit action.
 - Edit drawer supports source preview, instruction, quick chips, and submit to `/api/tasks/[taskId]/edit`.

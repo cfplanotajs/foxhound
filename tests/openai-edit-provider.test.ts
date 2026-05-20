@@ -48,6 +48,7 @@ test("openai edit can use responses adapter when available", async () => {
   process.env.OPENAI_API_KEY = "test-key";
   process.env.DATABASE_URL = "file:./test.db";
   process.env.OPENAI_EDIT_ADAPTER = "responses";
+  process.env.OPENAI_RESPONSES_MODEL = "gpt-5.5";
   __resetEnvCacheForTests();
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "foxhound-"));
   const source = path.join(dir, "source.png");
@@ -57,7 +58,7 @@ test("openai edit can use responses adapter when available", async () => {
   provider.client = {
     responses: {
       create: async (payload: any) => {
-        assert.equal(payload.model, "gpt-image-2");
+        assert.equal(payload.model, "gpt-5.5");
         assert.equal(payload.tools[0].type, "image_generation");
         return { output: [{ type: "image_generation_call", result: Buffer.from("edited2").toString("base64") }] };
       }
@@ -66,6 +67,34 @@ test("openai edit can use responses adapter when available", async () => {
   };
   const out = await provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "edit this", sourceImagePath: source });
   assert.equal(out.providerMetadata.adapter, "responses");
+  assert.equal((out.providerMetadata as any).responsesModel, "gpt-5.5");
+  assert.equal((out.providerMetadata as any).imageModel, "gpt-image-2");
+});
+
+test("responses adapter uses default responses model when OPENAI_RESPONSES_MODEL is blank", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.DATABASE_URL = "file:./test.db";
+  process.env.OPENAI_EDIT_ADAPTER = "responses";
+  process.env.OPENAI_RESPONSES_MODEL = "   ";
+  __resetEnvCacheForTests();
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "foxhound-"));
+  const source = path.join(dir, "source.png");
+  await fs.writeFile(source, Buffer.from("pngbytes"));
+
+  const provider = new OpenAIProvider() as any;
+  provider.client = {
+    responses: {
+      create: async (payload: any) => {
+        assert.equal(payload.model, "gpt-5");
+        assert.notEqual(payload.model, "gpt-image-2");
+        return { output: [{ type: "image_generation_call", result: Buffer.from("edited2").toString("base64") }] };
+      }
+    },
+    images: { edit: async () => { throw new Error("should not call images.edit"); } }
+  };
+  const out = await provider.generateImage({ provider: "openai", mode: "edit", model: "gpt-image-2", prompt: "edit this", sourceImagePath: source });
+  assert.equal(out.providerMetadata.adapter, "responses");
+  assert.equal((out.providerMetadata as any).responsesModel, "gpt-5");
 });
 
 test("responses adapter falls back to images.edit when responses unavailable", async () => {
